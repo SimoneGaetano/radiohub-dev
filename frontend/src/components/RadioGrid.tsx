@@ -1,6 +1,10 @@
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { useAppSelector } from '../app/hooks';
 import { RadioCard } from './RadioCard';
+import { RadioSkeleton } from './RadioSkeleton';
+
+/** Skeleton cards shown while the first page is still loading. */
+const SKELETON_COUNT = 9;
 
 export function RadioGrid() {
   const { items, status, error, cache, query } = useAppSelector(
@@ -9,9 +13,13 @@ export function RadioGrid() {
 
   if (status === 'loading' && items.length === 0) {
     return (
-      <div className="flex items-center gap-3 py-12 text-sm text-slate-400">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-        Caricamento delle radio…
+      <div role="status" aria-label="Caricamento delle radio">
+        <span className="sr-only">Caricamento delle radio…</span>
+        <div aria-hidden="true" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+            <RadioSkeleton key={index} />
+          ))}
+        </div>
       </div>
     );
   }

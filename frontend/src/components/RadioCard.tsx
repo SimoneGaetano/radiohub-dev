@@ -1,14 +1,33 @@
-import { Pause, Play } from 'lucide-react';
+import { Pause, Play, Share2 } from 'lucide-react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { playStation, togglePlay } from '../features/player/playerSlice';
 import type { RadioStation } from '../types';
+import { useToast } from './Toast';
 
 interface Props {
   station: RadioStation;
 }
 
+/** Copies text via the Clipboard API, with a legacy fallback for older browsers. */
+async function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const area = document.createElement('textarea');
+  area.value = text;
+  area.style.position = 'fixed';
+  area.style.opacity = '0';
+  document.body.appendChild(area);
+  area.select();
+  document.execCommand('copy');
+  document.body.removeChild(area);
+}
+
 export function RadioCard({ station }: Props) {
   const dispatch = useAppDispatch();
+  const { showToast } = useToast();
   const { current, isPlaying } = useAppSelector((state) => state.player);
 
   const isCurrent = current?.id === station.id;
@@ -19,6 +38,17 @@ export function RadioCard({ station }: Props) {
       dispatch(togglePlay());
     } else {
       dispatch(playStation(station));
+    }
+  };
+
+  const handleShare = async (event: ReactMouseEvent<HTMLButtonElement>) => {
+    // Keep the card toggle from firing: the share button must not start playback.
+    event.stopPropagation();
+    try {
+      await copyToClipboard(station.url);
+      showToast(`Link di “${station.name}” copiato negli appunti`, 'success');
+    } catch {
+      showToast('Impossibile copiare il link negli appunti', 'error');
     }
   };
 
@@ -56,27 +86,39 @@ export function RadioCard({ station }: Props) {
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={(event) => {
-          // Stop the click from reaching the card, otherwise handleToggle
-          // would fire twice and cancel itself out.
-          event.stopPropagation();
-          handleToggle();
-        }}
-        aria-label={isActive ? `Pausa ${station.name}` : `Riproduci ${station.name}`}
-        className={
-          isActive
-            ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-slate-950 transition hover:bg-emerald-400'
-            : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800 text-slate-200 transition hover:bg-slate-700'
-        }
-      >
-        {isActive ? (
-          <Pause className="h-4 w-4" aria-hidden="true" />
-        ) : (
-          <Play className="h-4 w-4" aria-hidden="true" />
-        )}
-      </button>
+      <div className="flex shrink-0 items-start gap-1.5">
+        <button
+          type="button"
+          onClick={handleShare}
+          aria-label={`Copia il link di ${station.name}`}
+          title="Copia link"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-white/10 hover:text-slate-200"
+        >
+          <Share2 className="h-4 w-4" aria-hidden="true" />
+        </button>
+
+        <button
+          type="button"
+          onClick={(event) => {
+            // Stop the click from reaching the card, otherwise handleToggle
+            // would fire twice and cancel itself out.
+            event.stopPropagation();
+            handleToggle();
+          }}
+          aria-label={isActive ? `Pausa ${station.name}` : `Riproduci ${station.name}`}
+          className={
+            isActive
+              ? 'flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-slate-950 transition hover:bg-emerald-400'
+              : 'flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-slate-200 transition hover:bg-slate-700'
+          }
+        >
+          {isActive ? (
+            <Pause className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Play className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+      </div>
     </article>
   );
 }

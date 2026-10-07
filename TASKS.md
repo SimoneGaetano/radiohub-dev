@@ -157,6 +157,28 @@
 - [x] Spaziatura dinamica delle frecce prec/succ: riga `max-w-md sm:max-w-lg md:max-w-2xl mx-auto justify-between px-2 sm:px-4` con `gap-3` minimo — le frecce scivolano verso l'esterno man mano che la finestra si allarga
 - [x] Verifica: `npx tsc --noEmit` (0 errori) e `npm run build` (exit 0)
 
+### Task 4.7 — Migliorie visive Player Audio [x]
+
+- [x] Colori ambientali dinamici: `fast-average-color@9.6.0` + hook `src/hooks/useAmbientColor.ts` estraggono il tono dominante della copertina (`algorithm: 'dominant'`) e lo applicano in sfumatura sull'overlay, con normalizzazione del tono e **fallback neutro `null`** (gradiente scuro) se il canvas è bloccato da CORS
+- [x] Equalizzatore a 4 barrette verdi nel mini-player accanto al titolo: componente condiviso `src/components/Equalizer.tsx` (usato anche dalla modale), animato **solo** in stato `playing` e attenuato in pausa
+- [x] Animazioni gestite in `index.css` (`.eq-bar`, nuova `.eq-bar-mini` a 650ms) entrambe disattivate da `@media (prefers-reduced-motion: reduce)`
+- [x] Verifica: `npx tsc --noEmit` (0 errori) e `npm run build` (exit 0)
+
+### Task 4.8 — Fix bug visivi del Full Player [x]
+
+- [x] Copertina a dimensioni fisse e identici per ogni stazione (`w-60 h-60 sm:w-64 sm:h-64 aspect-square`) con `w-full h-full object-cover rounded-2xl` su `<img>` e fallback → il formato dell'immagine originale non sposta più il layout
+- [x] Rimossa la `<img>` sfocata in `absolute` dietro la copertina (l'elemento fantasma che sbucava a sinistra) e di conseguenza il `backdrop-blur-2xl` che la sfocava
+- [x] Sfondo neutro `from-slate-900 to-zinc-950` + `transition-colors duration-200 ease-out`, con tint azzerato **sincronamente** al cambio stazione (nessun residuo verde) e `null` su errore/CORS
+- [x] `key={current.id}` sull'immagine per forzare il re-render pulito al cambio stazione
+- [x] Verifica: `npx tsc --noEmit` (0 errori) e `npm run build` (exit 0)
+
+### Task 4.9 — UX globale: skeleton + toast [x]
+
+- [x] Skeleton loaders: `RadioSkeleton.tsx` (con `animate-pulse`, struttura uguale alla card inclusi i due tasti) e 9 card nella griglia durante il caricamento invece dello spinner
+- [x] Toast eleganti: `Toast.tsx` (`ToastProvider` in `App.tsx`, basso-destra, max 3, 4.5s, `prefers-reduced-motion`) collegati a: copia link (`Share2` sulla card), errori di stream nel `Player`
+- [x] Nota: i preferiti UI non esistono ancora (Task 2.4 `[ ]`), quindi il toast "preferiti" arriverà con quella task
+- [x] Verifica: `npx tsc --noEmit` (0 errori) e `npm run build` (exit 0)
+
 ---
 
 ## Milestone 5 — Docker Unico, Test e Consegna

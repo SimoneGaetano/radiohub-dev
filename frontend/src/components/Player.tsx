@@ -10,10 +10,13 @@ import {
   stopPlayback,
   togglePlay,
 } from '../features/player/playerSlice';
+import { useToast } from './Toast';
+import { Equalizer } from './Equalizer';
 import { FullPlayer } from './FullPlayer';
 
 export function Player() {
   const dispatch = useAppDispatch();
+  const { showToast } = useToast();
   const { current, isPlaying, volume, expanded } = useAppSelector(
     (state) => state.player,
   );
@@ -70,11 +73,15 @@ export function Player() {
     if (isPlaying) {
       void audio.play().catch(() => {
         dispatch(stopPlayback());
+        showToast(
+          `Impossibile avviare “${current?.name ?? 'la stazione'}”: il flusso audio non risponde`,
+          'error',
+        );
       });
     } else {
       audio.pause();
     }
-  }, [isPlaying, dispatch]);
+  }, [isPlaying, dispatch, showToast, current?.name]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -113,9 +120,16 @@ export function Player() {
           </button>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-slate-100">
-              {current.name}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 truncate text-sm font-semibold text-slate-100">
+                {current.name}
+              </p>
+              <Equalizer
+                playing={isPlaying}
+                mini
+                className={`h-3 ${isPlaying ? 'opacity-100' : 'opacity-40'}`}
+              />
+            </div>
             <p className="truncate text-xs text-slate-400">
               {[current.country, current.language].filter(Boolean).join(' · ') ||
                 '—'}

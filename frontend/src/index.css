@@ -57,10 +57,34 @@ body,
   animation: eq-bounce 900ms ease-in-out infinite;
 }
 
+/* Quicker pulse for the four-bar meter in the compact bottom bar. */
+.eq-bar-mini {
+  transform-origin: bottom;
+  animation: eq-bounce 650ms ease-in-out infinite;
+}
+
+/* Transient notifications in the bottom-right corner. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-in {
+  animation: toast-in 200ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fullplayer-in,
   .fullplayer-out,
-  .eq-bar {
+  .eq-bar,
+  .eq-bar-mini,
+  .toast-in {
     animation: none;
   }
 }

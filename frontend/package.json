@@ -12,6 +12,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.13.0",
     "axios": "^1.20.0",
+    "fast-average-color": "^9.6.0",
     "hls.js": "^1.7.3",
     "lucide-react": "^1.52.0",
     "react": "^19.3.0",

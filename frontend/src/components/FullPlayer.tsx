@@ -19,6 +19,8 @@ import {
   togglePlay,
 } from '../features/player/playerSlice';
 import type { RadioStation } from '../types';
+import { useAmbientColor } from '../hooks/useAmbientColor';
+import { Equalizer } from './Equalizer';
 
 interface Props {
   /** Collapses the overlay back down to the bottom bar. */
@@ -27,26 +29,6 @@ interface Props {
 
 /** Collapse duration in ms — mirrored from `.fullplayer-out` in `index.css`. */
 const CLOSE_MS = 260;
-
-/** Animated equaliser badge; static while the stream is paused. */
-function Equalizer({ playing }: { playing: boolean }) {
-  return (
-    <span className="flex h-5 items-end gap-[3px]" aria-hidden="true">
-      {[0, 1, 2, 3].map((index) => (
-        <span
-          key={index}
-          style={{
-            animationDelay: `${index * 130}ms`,
-            height: `${55 + index * 15}%`,
-          }}
-          className={`w-[3px] rounded-full bg-emerald-400 ${
-            playing ? 'eq-bar' : ''
-          }`}
-        />
-      ))}
-    </span>
-  );
-}
 
 /** Shared look of the faded previous/next previews shown from `md` up. */
 const PREVIEW_CLASSES =
@@ -97,6 +79,7 @@ export function FullPlayer({ onClose }: Props) {
     (state) => state.player,
   );
   const stations = useAppSelector((state) => state.radios.items);
+  const ambientTint = useAmbientColor(current?.favicon ?? '');
 
   const [closing, setClosing] = useState(false);
   const [coverBroken, setCoverBroken] = useState(false);
@@ -203,17 +186,23 @@ export function FullPlayer({ onClose }: Props) {
         closing ? 'fullplayer-out' : 'fullplayer-in'
       }`}
     >
-      {/* Dynamic background: the station cover blurred into a gradient. */}
-      {showCover && (
-        <img
-          src={current.favicon}
-          alt=""
-          aria-hidden="true"
-          onError={() => setCoverBroken(true)}
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[130%] w-[130%] -translate-x-1/2 -translate-y-1/2 object-cover opacity-50 blur-[90px]"
-        />
-      )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-900/70 via-slate-950/85 to-slate-950 backdrop-blur-2xl" />
+      {/* Neutral dark base — also the fallback whenever no colour could be
+          extracted from the artwork. */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-900 to-zinc-950 transition-colors duration-200 ease-out" />
+
+      {/* Ambient tint from the artwork. The colour is cleared synchronously
+          when the station changes, so the neutral base shows through at once
+          and `transition-colors` fades the previous tone away. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 transition-colors duration-200 ease-out"
+        style={{
+          backgroundColor: ambientTint ?? 'transparent',
+          maskImage: 'linear-gradient(165deg, black 0%, transparent 58%)',
+          WebkitMaskImage: 'linear-gradient(165deg, black 0%, transparent 58%)',
+          opacity: 0.38,
+        }}
+      />
 
       <div className="relative z-10 flex h-dvh max-h-dvh flex-col justify-between overflow-hidden p-6">
         <header className="flex shrink-0 items-center justify-between">
@@ -270,19 +259,21 @@ export function FullPlayer({ onClose }: Props) {
                 />
               )}
 
-              {/* Cover capped at 30vh so header, info and controls fit. */}
-              <div className="relative flex max-h-[30vh] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-2xl ring-1 ring-white/10">
+              {/* Fixed, identical cover box for every station, so the artwork's
+                  intrinsic size can never shift the layout. */}
+              <div className="relative w-60 h-60 sm:w-64 sm:h-64 aspect-square shrink-0 overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10">
                 {showCover ? (
                   <img
+                    key={current.id}
                     src={current.favicon}
                     alt={`Copertina di ${current.name}`}
                     onError={() => setCoverBroken(true)}
-                    className="aspect-square max-h-[30vh] w-auto object-cover"
+                    className="w-full h-full object-cover rounded-2xl"
                   />
                 ) : (
-                  <div className="flex h-[30vh] w-[30vh] items-center justify-center bg-gradient-to-br from-emerald-900/70 to-slate-900">
+                  <div className="flex w-full h-full object-cover rounded-2xl items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
                     <Radio
-                      className="h-16 w-16 text-emerald-400/70"
+                      className="h-16 w-16 text-slate-400"
                       aria-hidden="true"
                     />
                   </div>

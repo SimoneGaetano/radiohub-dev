@@ -1,0 +1,135 @@
+# RadioHub — CI: typecheck, test e build a ogni push / pull request su main|master
+#
+# Allineata a docker-compose.yml (Node 22, postgres:16-alpine, redis:7-alpine)
+# e agli script di backend/package.json e frontend/package.json.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  # Permette di avviare la pipeline a mano dalla tabella Actions.
+  workflow_dispatch:
+
+# Un solo run per ref: un nuovo push annulla il run ancora in corso.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend — typecheck · test · build
+    runs-on: ubuntu-latest
+
+    # Stesse immagini e credenziali di docker-compose.yml: i test di
+    # integrazione possono usare Postgres e Redis reali come in locale.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: radiohub
+          POSTGRES_PASSWORD: radiohub
+          POSTGRES_DB: radiohub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U radiohub -d radiohub"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # src/config/env.ts è fail-fast e non ha default per DATABASE_URL,
+    # REDIS_URL e JWT_SECRET: senza queste variabili il backend nemmeno parte.
+    env:
+      NODE_ENV: test
+      LOG_LEVEL: warn
+      DATABASE_URL: postgresql://radiohub:radiohub@localhost:5432/radiohub?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-only-jwt-secret-min-16-chars
+      JWT_EXPIRES_IN: 1h
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Installa le dipendenze
+        working-directory: backend
+        run: npm ci
+
+      # backend/src/generated/ è in .gitignore: senza `prisma generate`
+      # typecheck, test e build falliscono perché il client non esiste.
+      - name: Genera il client Prisma
+        working-directory: backend
+        run: npx prisma generate
+
+      # Mantiene il database di CI allineato allo schema, come fa il
+      # container di backend all'avvio in docker-compose.yml.
+      - name: Applica le migrazioni
+        working-directory: backend
+        run: npm run prisma:deploy
+
+      - name: Typecheck (tsc --noEmit)
+        working-directory: backend
+        run: npx tsc --noEmit
+
+      - name: Test (vitest)
+        working-directory: backend
+        run: npm test
+
+      - name: Build di produzione
+        working-directory: backend
+        run: npm run build
+
+  frontend:
+    name: Frontend — typecheck · test · build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installa le dipendenze
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck (tsc --noEmit)
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Test
+        # Il frontend non ha ancora uno script `test`: --if-present salta il
+        # passo senza fallire e lo eseguirà da solo non appena lo aggiungi.
+        working-directory: frontend
+        run: npm test --if-present
+
+      - name: Build di produzione
+        working-directory: frontend
+        run: npm run build

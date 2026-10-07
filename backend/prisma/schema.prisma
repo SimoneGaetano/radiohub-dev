@@ -1,0 +1,42 @@
+// RadioHub — Prisma schema
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  favorites Favorite[]
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  radioId   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, radioId])
+}
+
+model Post {
+  id          String   @id @default(uuid())
+  externalId  String   @unique
+  title       String
+  content     String
+  publishedAt DateTime
+  summary     String?
+  createdAt   DateTime @default(now())
+}

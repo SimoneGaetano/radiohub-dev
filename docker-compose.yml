@@ -1,0 +1,115 @@
+# RadioHub — stack completa: Postgres + Redis + Backend + Frontend
+#
+# Avvio:            docker compose up --build
+# Ferma:            docker compose down
+# Azzera i dati:    docker compose down -v
+#
+# Le variabili sono lette dal file `.env` nella root del progetto
+# (vedi `.env.example`); in assenza di file `.env` si usano i valori di default.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: radiohub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-radiohub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-radiohub}
+      POSTGRES_DB: ${POSTGRES_DB:-radiohub}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-radiohub} -d ${POSTGRES_DB:-radiohub}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - radiohub
+
+  redis:
+    image: redis:7-alpine
+    container_name: radiohub-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - radiohub
+
+  backend:
+    build:
+      context: ./backend
+    container_name: radiohub-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-radiohub}:${POSTGRES_PASSWORD:-radiohub}@postgres:5432/${POSTGRES_DB:-radiohub}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-with-a-long-random-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      RADIO_API_BASE_URL: ${RADIO_API_BASE_URL:-https://de1.api.radio-browser.info}
+      RADIO_API_KEY: ${RADIO_API_KEY:-}
+      RADIO_API_TIMEOUT_MS: ${RADIO_API_TIMEOUT_MS:-5000}
+      RADIO_CACHE_TTL_SECONDS: ${RADIO_CACHE_TTL_SECONDS:-600}
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - radiohub
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: radiohub-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - radiohub
+
+volumes:
+  postgres_data:
+    name: radiohub-postgres-data
+  redis_data:
+    name: radiohub-redis-data
+
+networks:
+  radiohub:
+    name: radiohub-network
+    driver: bridge

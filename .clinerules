@@ -1,0 +1,18 @@
+# REGOLE DI SVILUPPO PER RADIOHUB
+
+1. COMPORTAMENTO E SPIEGAZIONI:
+   - Dopo ogni modifica o creazione di file, fornisci SEMPRE un riassunto in massimo 3 punti chiave di cosa hai fatto e perché.
+   - Non dare nulla per scontato: se incontri un errore nel terminale, spiegamelo prima di correggerlo.
+
+2. GESTIONE TASK:
+   - Fai riferimento al file `TASKS.md` per tracciare il lavoro.
+   - Lavora ESCLUSIVAMENTE sulla singola task richiesta senza anticipare le successive.
+   - Quando completi una task, aggiorna automaticamente il file `TASKS.md` cambiando la spunta da `- [ ]` a `- [x]`.
+
+3. ARCHITETTURA E STACK:
+   - Progetto Monorepo: `backend/` (Node.js + TypeScript + Express + Prisma) e `frontend/` (React + TypeScript + Vite + Tailwind).
+   - TypeScript strictly typed: evita l'uso di `any` non motivato.
+
+4. DOCKER & AMBIENTE:
+   - Mantieni le configurazioni allineate con `docker-compose.yml`.
+   - Usa sempre variabili d'ambiente tramite file `.env`.

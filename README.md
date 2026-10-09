@@ -249,6 +249,10 @@ vengono proxied dal dev-server Vite verso il backend su `http://localhost:4000`
   generato e il bundle **vendorizzato** di RapiDoc
   (`backend/public/rapidoc-min.js`) non vanno riformattati, e la formattazione
   non deve mai produrre modifiche a un file che non abbiamo scritto.
+- **La prosa resta a mano**: `*.md` è escluso da Prettier con una motivazione
+  scritta in `.prettierignore`. I documenti sono parte del prodotto e vengono
+  riletti riga per riga: far loro riscrivere tabelle e rientri produrrebbe un diff
+  illeggibile senza alcun guadagno.
 - **I due strumenti non si contraddicono**: `eslint-config-prettier` chiude la
   catena di configurazione e spegne le regole di formattazione di ESLint, così
   l'unico responsabile dello stile è Prettier.

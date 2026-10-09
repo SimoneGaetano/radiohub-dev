@@ -14,6 +14,12 @@ backend/public/rapidoc-min.js
 # Lockfile: generato da npm.
 package-lock.json
 
+# Documenti in prosa (README, TASKS, AI_USAGE): sono scritti a mano e
+# controllati riga per riga. Prettier li riscriverebbe (imbottitura delle
+# tabelle, rientri degli elenchi) rendendo illeggibile il diff di una consegna
+# in cui la documentazione è parte del prodotto.
+*.md
+
 # File di lavoro locali (già in .gitignore).
 diag.png
 frontend/shot-*.png

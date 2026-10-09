@@ -11,6 +11,8 @@ RUN npm ci
 COPY tsconfig.json tsconfig.build.json prisma7.config.ts ./
 COPY prisma ./prisma
 COPY src ./src
+# RapiDoc bundle (B5) served by the API at /api/docs/rapidoc-min.js.
+COPY public ./public
 
 RUN npx prisma generate \
     && npm run build
@@ -33,8 +35,12 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/src ./src
 COPY --from=build /app/prisma7.config.ts ./
 COPY --from=build /app/dist ./dist
+# Static assets of the API (RapiDoc bundle for /api/docs).
+COPY --from=build /app/public ./public
 
 EXPOSE 4000
 
-# Apply pending migrations, then start the API.
-CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/index.js"]
+# Apply pending migrations, seed the initial data (D1) and start the API.
+# The seed is idempotent (upserts) and must never block the boot: if it fails,
+# the API still starts and the news sync repopulates the table anyway.
+CMD ["sh", "-c", "npx prisma migrate deploy && (npx prisma db seed || echo 'seed skipped') && exec node dist/index.js"]

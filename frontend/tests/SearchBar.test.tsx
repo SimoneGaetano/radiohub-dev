@@ -7,7 +7,11 @@ import {
   TOP_STATIONS_LIMIT,
 } from '../src/features/radios/radiosSlice';
 import { api } from '../src/services/api';
-import type { RadioStation, RadiosResponse } from '../src/types';
+import type {
+  NaturalSearchInterpretation,
+  RadioStation,
+  RadiosResponse,
+} from '../src/types';
 import { axiosResponse, makeStore, renderApp } from './helpers/renderApp';
 
 /**
@@ -60,7 +64,10 @@ describe('SearchBar — ricerca radio (F1)', () => {
 
     const input = screen.getByLabelText('Cerca una radio per nome');
     expect(input).toHaveAttribute('type', 'search');
-    expect(input).toHaveAttribute('placeholder', 'jazz, rock, news…');
+    expect(input).toHaveAttribute(
+      'placeholder',
+      'jazz, rock, news… oppure «una radio jazz italiana»',
+    );
   });
 
   it('al montaggio chiede la classifica di base: nessuna query, tetto di 50', async () => {
@@ -123,5 +130,107 @@ describe('SearchBar — ricerca radio (F1)', () => {
         params: { limit: TOP_STATIONS_LIMIT, page: 1 },
       }),
     );
+  });
+});
+
+describe('SearchBar — frase in linguaggio naturale (X3)', () => {
+  const interpret = vi.mocked(api.post);
+
+  const INTERPRETATION: NaturalSearchInterpretation = {
+    originalQuery: 'una radio jazz italiana',
+    filters: {
+      tags: ['jazz', 'blues', 'soul', 'funk'],
+      countryCode: 'IT',
+      order: 'votes',
+    },
+    source: 'rules',
+    provider: null,
+    matched: ['jazz', 'italiana'],
+    note: null,
+    fallbackReason: 'no-provider',
+  };
+
+  beforeEach(() => {
+    interpret.mockReset();
+    interpret.mockResolvedValue(axiosResponse({ data: INTERPRETATION }));
+  });
+
+  it('interpreta la frase e cerca con i filtri capiti, non col testo', async () => {
+    const user = userEvent.setup();
+
+    renderApp(<SearchBar />);
+    const input = screen.getByLabelText('Cerca una radio per nome');
+    await waitFor(() => expect(getRadios).toHaveBeenCalledTimes(1));
+
+    await user.type(input, 'una radio jazz italiana');
+    await user.click(
+      screen.getByRole('button', { name: 'Interpreta la frase' }),
+    );
+
+    await waitFor(() =>
+      expect(interpret).toHaveBeenCalledWith('/radios/search', {
+        query: 'una radio jazz italiana',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(getRadios).toHaveBeenLastCalledWith('/radios', {
+        params: {
+          limit: TOP_STATIONS_LIMIT,
+          page: 1,
+          tag: 'jazz,blues,soul,funk',
+          countryCode: 'IT',
+          order: 'votes',
+        },
+      }),
+    );
+
+    // I filtri capiti sono visibili, così l'utente può correggerli.
+    expect(await screen.findByText('Genere: jazz')).toBeInTheDocument();
+    expect(screen.getByText('Paese: IT')).toBeInTheDocument();
+    expect(screen.getByText(/Capito con le regole locali/)).toBeInTheDocument();
+  });
+
+  it('digitare di nuovo abbandona i filtri interpretati', async () => {
+    const user = userEvent.setup();
+    const { store } = renderApp(<SearchBar />);
+    const input = screen.getByLabelText('Cerca una radio per nome');
+    await waitFor(() => expect(getRadios).toHaveBeenCalledTimes(1));
+
+    await user.type(input, 'una radio jazz italiana');
+    await user.click(
+      screen.getByRole('button', { name: 'Interpreta la frase' }),
+    );
+    await waitFor(() =>
+      expect(store.getState().radios.interpretation).not.toBeNull(),
+    );
+
+    await user.type(input, 'x');
+
+    expect(store.getState().radios.interpretation).toBeNull();
+  });
+
+  it('tiene il pulsante disabilitato finché la frase è troppo corta', () => {
+    renderApp(<SearchBar />);
+
+    expect(
+      screen.getByRole('button', { name: 'Interpreta la frase' }),
+    ).toBeDisabled();
+  });
+
+  it('mostra l’errore quando l’interpretazione fallisce', async () => {
+    const user = userEvent.setup();
+    interpret.mockRejectedValue(new Error('rete giù'));
+
+    renderApp(<SearchBar />);
+    await user.type(
+      screen.getByLabelText('Cerca una radio per nome'),
+      'una radio jazz italiana',
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Interpreta la frase' }),
+    );
+
+    expect(await screen.findByText('rete giù')).toBeInTheDocument();
   });
 });

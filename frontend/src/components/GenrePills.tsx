@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import {
+  clearInterpretation,
   resetRadiosFilters,
   setGenreFilter,
   setSearchTerm,
@@ -179,6 +180,10 @@ export function GenrePills() {
     if (pill.id === active) {
       return;
     }
+    // Scegliere una pill abbandona l'interpretazione (X3): la pill è la nuova
+    // intenzione, e senza questo reset l'orchestratore continuerebbe a usare i
+    // filtri della frase.
+    dispatch(clearInterpretation());
     if (pill.id === 'all') {
       // Full baseline reset: clears search text + filters so SearchBar
       // refires the exact same clean top-50 call as the initial mount.

@@ -26,6 +26,34 @@ export interface RadiosResponse {
   meta: RadiosMeta;
 }
 
+/** X3 — filtri riconosciuti in una frase (`POST /api/radios/search`). */
+export interface NaturalSearchFilters {
+  q?: string;
+  tags?: string[];
+  countryCode?: string;
+  bitrateMin?: number;
+  order?: 'votes' | 'name' | 'clickcount' | 'bitrate';
+}
+
+export interface NaturalSearchInterpretation {
+  originalQuery: string;
+  filters: NaturalSearchFilters;
+  /** Chi ha interpretato: il modello (`ai`) o le regole deterministiche. */
+  source: 'ai' | 'rules';
+  /** Provider del modello, `null` quando ha risposto con le regole. */
+  provider: string | null;
+  /** Parole riconosciute nei dizionari. */
+  matched: string[];
+  /** Spiegazione breve del modello, quando presente. */
+  note: string | null;
+  /** Motivo del passaggio alle regole (`no-provider`, `invalid json`, ...). */
+  fallbackReason: string | null;
+}
+
+export interface NaturalSearchResponse {
+  data: NaturalSearchInterpretation;
+}
+
 export type CacheStatus = 'HIT' | 'MISS';
 
 export interface AuthUser {

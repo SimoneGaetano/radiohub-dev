@@ -1,7 +1,13 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { api, extractErrorMessage } from '../../services/api';
-import type { CacheStatus, RadioStation, RadiosResponse } from '../../types';
+import type {
+  CacheStatus,
+  NaturalSearchInterpretation,
+  NaturalSearchResponse,
+  RadioStation,
+  RadiosResponse,
+} from '../../types';
 
 type AsyncStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 
@@ -16,6 +22,15 @@ interface RadiosState {
   searchTerm: string;
   /** Active genre/quality pill; 'all' disables local filtering. */
   genreFilter: string;
+  /**
+   * X3 — interpretazione dell'ultima frase in linguaggio naturale. Quando c'è,
+   * l'orchestratore la usa come filtro della ricerca al posto del testo digitato.
+   */
+  interpretation: NaturalSearchInterpretation | null;
+  /** Interpretazione in corso (il modello può metterci qualche secondo). */
+  interpreting: boolean;
+  /** Errore dell'ultima interpretazione, mostrato sotto la barra. */
+  interpretError: string | null;
 }
 
 const initialState: RadiosState = {
@@ -26,6 +41,9 @@ const initialState: RadiosState = {
   query: '',
   searchTerm: '',
   genreFilter: 'all',
+  interpretation: null,
+  interpreting: false,
+  interpretError: null,
 };
 
 /**
@@ -82,6 +100,27 @@ export const searchRadios = createAsyncThunk<
   }
 });
 
+/**
+ * X3 — interpreta una frase in italiano ("voglio una radio jazz italiana") e la
+ * traduce nei filtri di ricerca. Il backend risponde con **l'interpretazione**,
+ * non con le stazioni: la ricerca la esegue lo stesso orchestratore di sempre, e
+ * l'utente vede cosa è stato capito (e può correggerlo).
+ */
+export const interpretSearch = createAsyncThunk<
+  NaturalSearchInterpretation,
+  string,
+  { rejectValue: string }
+>('radios/interpret', async (query, { rejectWithValue }) => {
+  try {
+    const response = await api.post<NaturalSearchResponse>('/radios/search', {
+      query,
+    });
+    return response.data.data;
+  } catch (error) {
+    return rejectWithValue(extractErrorMessage(error));
+  }
+});
+
 const radiosSlice = createSlice({
   name: 'radios',
   initialState,
@@ -95,6 +134,14 @@ const radiosSlice = createSlice({
       state.genreFilter = action.payload;
     },
     /**
+     * X3 — dimentica l'interpretazione: la ricerca torna a derivare dal testo
+     * digitato e dalla pill attiva.
+     */
+    clearInterpretation(state) {
+      state.interpretation = null;
+      state.interpretError = null;
+    },
+    /**
      * Clean reset to the "Tutti" baseline: clears every filter residue
      * (tag/country/search) so the next fetch is a clean top-50 call.
      */
@@ -102,6 +149,8 @@ const radiosSlice = createSlice({
       state.searchTerm = '';
       state.genreFilter = 'all';
       state.query = '';
+      state.interpretation = null;
+      state.interpretError = null;
     },
   },
   extraReducers: (builder) => {
@@ -120,10 +169,26 @@ const radiosSlice = createSlice({
       .addCase(searchRadios.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload ?? 'Ricerca non riuscita';
+      })
+      .addCase(interpretSearch.pending, (state) => {
+        state.interpreting = true;
+        state.interpretError = null;
+      })
+      .addCase(interpretSearch.fulfilled, (state, action) => {
+        state.interpreting = false;
+        state.interpretation = action.payload;
+      })
+      .addCase(interpretSearch.rejected, (state, action) => {
+        state.interpreting = false;
+        state.interpretError = action.payload ?? 'Interpretazione non riuscita';
       });
   },
 });
 
-export const { setSearchTerm, setGenreFilter, resetRadiosFilters } =
-  radiosSlice.actions;
+export const {
+  setSearchTerm,
+  setGenreFilter,
+  clearInterpretation,
+  resetRadiosFilters,
+} = radiosSlice.actions;
 export default radiosSlice.reducer;

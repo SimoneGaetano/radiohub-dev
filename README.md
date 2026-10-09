@@ -36,7 +36,8 @@ RadioHub/
 │   ├── vite.config.ts   # Vite + plugin React + Tailwind + proxy /api
 │   └── tsconfig.json    # TypeScript strict
 ├── docker-compose.yml   # PostgreSQL + Redis per lo sviluppo locale
-├── TASKS.md             # Roadmap delle task
+├── TASKS.md             # Tracker: stato per requisito e task aperte
+├── TASKS-archive.md     # Log dettagliato delle task (diagnosi, misure, verifiche)
 └── .clinerules          # Regole del progetto
 ```
 

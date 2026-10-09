@@ -190,3 +190,15 @@ export const summaryRateLimiter = createRateLimiter({
   windowSeconds: env.RATE_LIMIT_AI_WINDOW_SECONDS,
   keyGenerator: userOrIpKey,
 });
+
+/**
+ * Quota sull'interpretazione in linguaggio naturale (X3): chiama il modello come
+ * i riassunti, quindi usa la stessa quota (`RATE_LIMIT_AI_*`) ma un **bucket
+ * separato** — esaurire una delle due non deve bloccare l'altra.
+ */
+export const naturalSearchRateLimiter = createRateLimiter({
+  bucket: 'nl-search',
+  max: env.RATE_LIMIT_AI_MAX,
+  windowSeconds: env.RATE_LIMIT_AI_WINDOW_SECONDS,
+  keyGenerator: userOrIpKey,
+});

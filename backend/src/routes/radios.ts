@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { getStationsByIds, searchRadios } from '../services/radioService';
 import { UpstreamError, UpstreamTimeoutError } from '../services/radioSource';
 import { buildFallbackBio, createAiService } from '../services/aiService';
+import { interpretQuery } from '../services/naturalSearchService';
+import { authenticateJWTOptional } from '../middleware/authenticateJWT';
+import { naturalSearchRateLimiter } from '../middleware/rateLimit';
 import { errorContext, logger } from '../utils/logger';
 
 /**
@@ -129,6 +132,44 @@ radiosRouter.get('/radios', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+/** X3 — schema del corpo di `POST /api/radios/search`. */
+const naturalSearchSchema = z.object({
+  query: z.string().trim().min(2).max(200),
+});
+
+/**
+ * X3 — da una frase in italiano ai **filtri** di ricerca.
+ *
+ * Restituisce l'interpretazione, non le stazioni: il client riusa
+ * `GET /api/radios` con quei filtri, quindi cache (B3), fonti (B1) e validazione
+ * restano una sola implementazione — e l'utente vede cosa è stato capito e può
+ * correggerlo, invece di ricevere una lista inspiegabile. Aperta anche agli
+ * ospiti; la quota è quella dei riassunti ma con bucket separato.
+ */
+radiosRouter.post(
+  '/radios/search',
+  authenticateJWTOptional,
+  naturalSearchRateLimiter,
+  async (req, res) => {
+    const parsed = naturalSearchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'Invalid payload',
+        details: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    try {
+      const interpretation = await interpretQuery(parsed.data.query);
+      res.json({ data: interpretation });
+    } catch (error) {
+      logger.error('Natural search interpretation failed', errorContext(error));
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  },
+);
 
 /**
  * Validation for `GET /api/radios/by-ids?ids=a,b,c`: 1 to 50 ids, used to

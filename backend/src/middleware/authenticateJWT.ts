@@ -42,6 +42,34 @@ export function authenticateJWT(
 }
 
 /**
+ * Like `authenticateJWT`, but a missing or invalid token is not an error: the
+ * request continues as a guest (`req.user` stays undefined). Used by endpoints
+ * that have a public fallback, e.g. the AI summaries (shared cache for guests,
+ * per-user rows for signed-in users).
+ */
+export function authenticateJWTOptional(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): void {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith(BEARER_PREFIX)) {
+    next();
+    return;
+  }
+
+  const token = header.slice(BEARER_PREFIX.length).trim();
+  if (token.length > 0) {
+    try {
+      req.user = verifyAccessToken(token);
+    } catch {
+      // Guest fallback: the summary endpoint still works without a session.
+    }
+  }
+  next();
+}
+
+/**
  * Returns the authenticated user, or throws if `authenticateJWT` did not run.
  */
 export function requireUser(req: Request): AuthUser {

@@ -6,6 +6,13 @@ import { closeRedis } from '../src/redis/client';
 
 const app = createApp();
 
+/**
+ * `limit=50` è valido, quindi la richiesta prosegue fino alla fonte esterna:
+ * con cache fredda e upstream lento i 5s di default non bastano. Gli altri test
+ * di validazione si fermano prima (400) e restano sul timeout standard.
+ */
+const LIVE_SOURCE_TIMEOUT_MS = 15_000;
+
 afterAll(async () => {
   await disconnectPrisma();
   await closeRedis();
@@ -43,7 +50,7 @@ describe('GET /api/radios (validazione query)', () => {
     const response = await request(app).get('/api/radios?limit=50');
 
     expect(response.status).not.toBe(400);
-  });
+  }, LIVE_SOURCE_TIMEOUT_MS);
 });
 
 describe('GET /api/favorites (autenticazione)', () => {

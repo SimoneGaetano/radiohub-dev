@@ -24,6 +24,18 @@ export interface RadioSearchParams {
   q?: string;
   limit: number;
   page: number;
+  /**
+   * Candidate upstream tags (`tagList`), tried **in order** until one returns
+   * results: Radio Browser tags are user-submitted and inconsistent
+   * (`chillout` / `lounge` / `ambient`), so a single tag often returns nothing.
+   */
+  tags?: string[];
+  /** ISO country code filter (`countrycode`), e.g. `IT`. */
+  countryCode?: string;
+  /** Minimum bitrate (`bitrateMin`). */
+  bitrateMin?: number;
+  /** Upstream ordering (`order`), e.g. `votes`. */
+  order?: string;
 }
 
 /** The upstream source was too slow to answer (→ HTTP 504). */
@@ -115,12 +127,49 @@ function toStation(raw: UpstreamStation): RadioStation {
 export async function fetchRadios(
   params: RadioSearchParams,
 ): Promise<RadioStation[]> {
+  const candidates =
+    params.tags && params.tags.length > 0
+      ? params.tags.filter((tag) => tag.length > 0)
+      : [undefined];
+
+  let stations: RadioStation[] = [];
+  for (const tag of candidates) {
+    stations = await requestStations({ ...params, tag });
+    if (stations.length > 0) {
+      break;
+    }
+  }
+  return stations;
+}
+
+/** Performs one upstream search request (no fallback logic). */
+async function requestStations(params: {
+  q?: string;
+  limit: number;
+  page: number;
+  tag?: string;
+  countryCode?: string;
+  bitrateMin?: number;
+  order?: string;
+}): Promise<RadioStation[]> {
   const url = new URL('/json/stations/search', env.RADIO_API_BASE_URL);
   url.searchParams.set('hidebroken', 'true');
   url.searchParams.set('limit', String(params.limit));
   url.searchParams.set('offset', String((params.page - 1) * params.limit));
   if (params.q) {
     url.searchParams.set('name', params.q);
+  }
+  if (params.tag) {
+    url.searchParams.set('tagList', params.tag);
+  }
+  if (params.countryCode) {
+    url.searchParams.set('countrycode', params.countryCode);
+  }
+  if (params.bitrateMin !== undefined) {
+    url.searchParams.set('bitrateMin', String(params.bitrateMin));
+  }
+  if (params.order) {
+    url.searchParams.set('order', params.order);
   }
 
   let response: Response;
@@ -150,4 +199,56 @@ export async function fetchRadios(
   }
 
   return parsed.data.map(toStation);
+}
+
+/**
+ * Resolves stations from their `stationuuid` (used to render the favourites and
+ * the recents that exist on the server but were never seen on this device).
+ *
+ * Unlike `fetchRadios`, a malformed item is **skipped** instead of failing the
+ * whole batch: a station removed upstream must not break the favourites list.
+ */
+export async function fetchStationsByIds(
+  ids: string[],
+): Promise<RadioStation[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const url = new URL('/json/stations/byuuid', env.RADIO_API_BASE_URL);
+  url.searchParams.set('uuids', ids.join(','));
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: buildHeaders(),
+      signal: AbortSignal.timeout(env.RADIO_API_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new UpstreamTimeoutError();
+    }
+    throw new UpstreamError('Unable to reach the upstream radio source');
+  }
+
+  if (!response.ok) {
+    throw new UpstreamError(
+      `Upstream radio source responded with status ${response.status}`,
+      response.status,
+    );
+  }
+
+  const payload: unknown = await response.json();
+  if (!Array.isArray(payload)) {
+    throw new UpstreamError('Unexpected payload from the upstream radio source');
+  }
+
+  const stations: RadioStation[] = [];
+  for (const item of payload) {
+    const parsed = upstreamStationSchema.safeParse(item);
+    if (parsed.success) {
+      stations.push(toStation(parsed.data));
+    }
+  }
+  return stations;
 }

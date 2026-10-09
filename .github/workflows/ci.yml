@@ -77,6 +77,16 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      # D3: gli stessi due comandi usati in locale. Non serve il client Prisma:
+      # `src/generated/` è escluso sia da ESLint sia da Prettier.
+      - name: Lint (ESLint)
+        working-directory: backend
+        run: npm run lint
+
+      - name: Formattazione (Prettier)
+        working-directory: backend
+        run: npm run format:check
+
       # backend/src/generated/ è in .gitignore: senza `prisma generate`
       # typecheck, test e build falliscono perché il client non esiste.
       - name: Genera il client Prisma
@@ -119,6 +129,15 @@ jobs:
       - name: Installa le dipendenze
         working-directory: frontend
         run: npm ci
+
+      # D3: gli stessi due comandi usati in locale.
+      - name: Lint (ESLint)
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Formattazione (Prettier)
+        working-directory: frontend
+        run: npm run format:check
 
       - name: Typecheck (tsc --noEmit)
         working-directory: frontend

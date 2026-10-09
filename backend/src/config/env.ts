@@ -64,6 +64,12 @@ const envSchema = z.object({
   // Auth (JWT)
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_EXPIRES_IN: z.string().default('1h'),
+  /**
+   * X6 — durata del refresh token, in secondi (default 7 giorni). Si usa un
+   * numero di secondi e non una stringa tipo `7d` per non aggiungere un parser:
+   * il TTL va passato a Redis così com'è.
+   */
+  REFRESH_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(604800),
 
   // AI (OpenAI / Gemini) — optional; enables the real provider when set.
   OPENAI_API_KEY: z.string().trim().optional(),
@@ -85,6 +91,21 @@ const envSchema = z.object({
   NEWS_SYNC_INTERVAL_SECONDS: z.coerce.number().int().positive().default(300),
   /** Shared secret required by POST /api/sync; when unset the route is disabled. */
   SYNC_API_KEY: z.string().trim().optional(),
+
+  // Rate limiting (X6) — contatori su Redis per bucket.
+  /** Quota generale delle API: richieste ammesse per IP e per finestra. */
+  RATE_LIMIT_API_MAX: z.coerce.number().int().positive().default(300),
+  RATE_LIMIT_API_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+  /** Quota su login e registrazione (difesa da forza bruta). */
+  RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(10),
+  RATE_LIMIT_AUTH_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(900),
+  /** Quota sulle generazioni di riassunti AI (costo del modello). */
+  RATE_LIMIT_AI_MAX: z.coerce.number().int().positive().default(20),
+  RATE_LIMIT_AI_WINDOW_SECONDS: z.coerce.number().int().positive().default(300),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { authenticateJWTOptional } from '../middleware/authenticateJWT';
+import { summaryRateLimiter } from '../middleware/rateLimit';
 import { summaryService } from '../services/summaryService';
 import {
   invalidatePostsCache,
@@ -151,5 +152,21 @@ async function sendSummary(req: Request, res: Response): Promise<void> {
   }
 }
 
-postsRouter.get('/posts/:id/summary', authenticateJWTOptional, sendSummary);
-postsRouter.post('/posts/:id/summary', authenticateJWTOptional, sendSummary);
+/**
+ * X6 — la generazione del riassunto è l'unica chiamata che ha un costo
+ * (il modello AI): è la rotta con la sua quota, montata **dopo** il middleware
+ * di autenticazione così il contatore è per utente e non per IP — un'intera rete
+ * aziendale non deve condividere la quota di un singolo.
+ */
+postsRouter.get(
+  '/posts/:id/summary',
+  authenticateJWTOptional,
+  summaryRateLimiter,
+  sendSummary,
+);
+postsRouter.post(
+  '/posts/:id/summary',
+  authenticateJWTOptional,
+  summaryRateLimiter,
+  sendSummary,
+);

@@ -23,6 +23,16 @@ export default defineConfig({
        * chiave Gemini reale (che verrebbe chiamata davvero dalla rete).
        */
       SUMMARY_PROVIDER: 'mock',
+      /**
+       * X6 — quota alzate al massimo nei test: la suite fa centinaia di
+       * richieste da `127.0.0.1`, quindi con le quote reali i test fallirebbero
+       * con `429` per motivi che non stanno verificando. Le soglie vere (429
+       * compreso) sono testate da `tests/rateLimit.test.ts`, che costruisce il
+       * middleware con i propri valori.
+       */
+      RATE_LIMIT_API_MAX: '100000',
+      RATE_LIMIT_AUTH_MAX: '100000',
+      RATE_LIMIT_AI_MAX: '100000',
     },
   },
 });

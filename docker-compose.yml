@@ -17,12 +17,15 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-radiohub}
       POSTGRES_DB: ${POSTGRES_DB:-radiohub}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - '${POSTGRES_PORT:-5433}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test:
-        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-radiohub} -d ${POSTGRES_DB:-radiohub}"]
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-radiohub} -d ${POSTGRES_DB:-radiohub}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,13 +36,13 @@ services:
     image: redis:7-alpine
     container_name: radiohub-redis
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ['redis-server', '--appendonly', 'yes']
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -74,8 +77,15 @@ services:
       NEWS_FEED_URL: ${NEWS_FEED_URL:-https://d3r6kmd22dkoyn.cloudfront.net/}
       NEWS_SYNC_INTERVAL_SECONDS: ${NEWS_SYNC_INTERVAL_SECONDS:-300}
       SYNC_API_KEY: ${SYNC_API_KEY:-}
+      # X6: rate limiting (contatori su Redis per bucket)
+      RATE_LIMIT_API_MAX: ${RATE_LIMIT_API_MAX:-300}
+      RATE_LIMIT_API_WINDOW_SECONDS: ${RATE_LIMIT_API_WINDOW_SECONDS:-60}
+      RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-10}
+      RATE_LIMIT_AUTH_WINDOW_SECONDS: ${RATE_LIMIT_AUTH_WINDOW_SECONDS:-900}
+      RATE_LIMIT_AI_MAX: ${RATE_LIMIT_AI_MAX:-20}
+      RATE_LIMIT_AI_WINDOW_SECONDS: ${RATE_LIMIT_AI_WINDOW_SECONDS:-300}
     ports:
-      - "${BACKEND_PORT:-4000}:4000"
+      - '${BACKEND_PORT:-4000}:4000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,9 +94,9 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "node",
-          "-e",
+          'CMD',
+          'node',
+          '-e',
           "fetch('http://localhost:4000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
       interval: 15s
@@ -102,12 +112,12 @@ services:
     container_name: radiohub-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - '${FRONTEND_PORT:-8080}:80'
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/']
       interval: 15s
       timeout: 5s
       retries: 5

@@ -10,7 +10,7 @@ quelle del documento di consegna.
 
 ## 1. Stato rispetto alla traccia 22HBG
 
-### Obbligatori — 16 fatti, 2 parziali
+### Obbligatori — 17 fatti, 1 parziale
 
 | # | Requisito | Stato | Dove sta la prova |
 | --- | --- | --- | --- |
@@ -29,7 +29,7 @@ quelle del documento di consegna.
 | **A3** | Timeout, errori, testi lunghi, difesa da prompt injection | `[x]` | README § *Riassunti AI (A1–A3)* |
 | **D1** | `docker compose up` unico, build multi-stage, migrate + seed | `[x]` | `docker-compose.yml`, i due `Dockerfile` |
 | **D2** | Tutto da variabili d'ambiente, `.env.example`, mai `.env` | `[x]` | `config/env.ts` (Zod, fail-fast); `.env` è in `.gitignore` |
-| **D3** | ESLint + Prettier, TypeScript strict, commit piccoli | `[~]` | TS strict `[x]` e cronologia `[x]` (13 commit per area); **ESLint e Prettier mancano** |
+| **D3** | ESLint + Prettier, TypeScript strict, commit piccoli | `[x]` | config flat in `backend/eslint.config.mjs` e `frontend/eslint.config.mjs` + Prettier alla radice; `lint` e `format:check` in CI; storia in commit per area |
 | **D4** | Test unitari + integrazione backend, **RTL sul frontend** | `[~]` | Backend `[x]` — **83 test in 11 file**; **frontend 0 test** |
 | **D5** | Log strutturati, `GET /api/health` con DB e Redis | `[x]` | `utils/logger.ts` (JSON in produzione), `routes/health.ts` |
 
@@ -50,11 +50,10 @@ quelle del documento di consegna.
 
 | # | Cosa | Tipo | Sforzo |
 | --- | --- | --- | --- |
-| 1 | **D3** — ESLint + Prettier: config, dipendenze, script `lint`, passo in CI | obbligatorio | ~1 h |
-| 2 | **D4** — test frontend con React Testing Library su `Player` e `SearchBar` | obbligatorio | 2-4 h |
-| 3 | **Consegna** — sezione *Requisiti bonus svolti* nel `README.md` | consegna | 20 min |
-| 4 | **X5** — nuovi post in tempo reale (SSE) | bonus | medio |
-| 5 | **X6** — rate limiting e refresh token (2 dei 4 pezzi già fatti) | bonus | medio |
+| 1 | **D4** — test frontend con React Testing Library su `Player` e `SearchBar` | obbligatorio | 2-4 h |
+| 2 | **Consegna** — sezione *Requisiti svolti* nel `README.md` | consegna | 20 min |
+| 3 | **X5** — nuovi post in tempo reale (SSE) | bonus | medio |
+| 4 | **X6** — rate limiting e refresh token (2 dei 4 pezzi già fatti) | bonus | medio |
 | — | X2 / X3 / X4 / X8 | bonus | alti |
 
 ### Task interne ancora aperte (non richieste dalla traccia)
@@ -122,6 +121,7 @@ Il dettaglio (diagnosi, misure, prima/dopo) sta in
 - [x] **4.23** Refresh che non aggiornava la pagina: cache della shell e deploy non allineato
 - [x] **4.24** La pagina `/api/docs` non rispondeva alla rotellina del mouse (B5)
 - [x] **4.25** B1: FM-World come fonte primaria della ricerca radio, con fallback dichiarato
+- [x] **4.26** Qualità del codice: ESLint 10 + Prettier su backend e frontend (D3)
 
 ### Milestone 5 — Docker unico, Test & Consegna
 

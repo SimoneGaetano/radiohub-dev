@@ -549,3 +549,19 @@ pm run build (exit 0)
 - [x] Difetto mio trovato nei log: `errorContext(error)` contiene `message`, che nel logger (`{ message, ...context }`) **sovrascrive** il messaggio della riga → il warn del fallback perdeva il "falling back". Ora il contesto usa la chiave `error`
 - [x] Difetto trovato in verifica: `de1.api.radio-browser.info` ha risposto `503` (rate limit) → il client riceve `502` coerente; documentato nel README con l'alternativa `all.api.radio-browser.info` (una variabile d'ambiente)
 - [x] README: nuova sezione "Fonte radio (B1)" con strategia e misura; "Limiti noti" riscritti (token non valido, payload non osservabile, filtri, mirror singolo) e rimossa la voce **F3** ormai completata
+
+### Task 4.26 — Qualità del codice: ESLint 10 + Prettier (D3) [x]
+
+> D3 chiede "ESLint e Prettier configurati": nel repository non c'erano né le configurazioni né le dipendenze, e la CI girava solo typecheck, test e build. Era l'ultimo obbligatorio "economico" rimasto — e quello che poteva fare più danno se fatto male, perché introdurre Prettier significa toccare tutto il codice in una volta.
+
+- [x] **ESLint 10** (flat config, l'unica forma che supporta) in `backend/eslint.config.mjs` e `frontend/eslint.config.mjs`: `js.configs.recommended` + `typescript-eslint/recommended`, con `eslint-config-prettier` **per ultimo** (spegne le regole di stile di ESLint: si vuole un solo responsabile della formattazione)
+- [x] Regole scelte e motivate nel file: `@typescript-eslint/no-explicit-any` = error (è la richiesta letterale di D3), `no-console` = error ovunque **tranne** `src/utils/logger.ts`, più `eqeqeq`, `no-var`, `prefer-const`
+- [x] Frontend: `react-hooks/rules-of-hooks` (error) ed `exhaustive-deps` (warn) più `react-refresh/only-export-components` (warn) dichiarate **a mano** invece dei preset dei plugin: il file non dipende dalla forma dei loro config, che cambia tra le major
+- [x] **Primo giro di lint: 14 errori, tutti falsi positivi veri e propri** — `public/sw.js` usa `self`, `caches`, `fetch`, `URL` e `js.configs.recommended` non conosce il contesto di un *service worker* → aggiunte le globali `globals.serviceworker` per quel solo file, con il motivo scritto accanto
+- [x] 3 warning (`GenrePills`, `SleepTimer`, `Toast`) sono **motivati nel codice**: quei moduli esportano costanti e hook accanto al componente di proposito, spostarli peggiorerebbe la coesione → `eslint .` esce ora con **0 problemi** in entrambi i package
+- [x] Rimosse le 3 direttive `eslint-disable no-console` di `logger.ts`, diventate inutili (ESLint 10 le segnalava come *unused directive*): la deroga è una sola, dichiarata nella configurazione per quel percorso
+- [x] **Prettier 3** con `.prettierrc.json` alla radice (apici singoli, virgole finali, 80 colonne, `endOfLine: auto` per non riscrivere i fine riga del checkout Windows) e `.prettierignore` **per package**: fuori il client Prisma generato e il bundle vendorizzato di RapiDoc, che non sono codice nostro
+- [x] Le esclusioni sono verificate: `prettier --check .` non tocca né `backend/src/generated` né `rapidoc-min.js`; i 24 file da formattare nel backend e 34 nel frontend sono tutti scritti a mano
+- [x] Formattazione applicata e **tutto riverificato**: `eslint .` 0 problemi, `prettier --check .` "All matched files use Prettier code style", `tsc --noEmit` 0 errori su entrambi i package, **83 test verdi** nel backend, `vite build` OK nel frontend
+- [x] CI: `npm run lint` e `npm run format:check` aggiunti a **entrambi** i job, prima di typecheck/test/build
+- [x] README: nuova sezione "Qualità del codice (D3)" con le scelte e il perché; le due tabelle degli script includono `lint`, `lint:fix`, `format`, `format:check`

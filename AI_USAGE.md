@@ -85,10 +85,6 @@ del codice:
 
 ## 6. Lavoro ancora manuale
 
-- **Cronologia git (D3)**: quasi tutto il lavoro è attualmente **non committato**
-  (2 commit, di cui uno "WIP"). Prima della consegna va suddiviso in commit piccoli
-  e descrittivi: è un requisito esplicito della traccia.
-- **ESLint e Prettier (D3)**: assenti; in CI girano typecheck, test e build.
 - **Test frontend con React Testing Library (D4)**: assenti. Il passo in CI è
   `npm test --if-present` e si attiverà da solo quando esisterà lo script.
 - **Rate limiting sulle API (bonus X6)**: `helmet` e CORS sono attivi, la

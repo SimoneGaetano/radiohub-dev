@@ -137,6 +137,10 @@ docker compose down -v       # ferma lo stack e azzera i dati
 | `npm run prisma:studio`   | Apre Prisma Studio                  |
 | `npm run prisma:seed`     | Popola il DB con i post di esempio  |
 | `npm test`                | Test di integrazione (Vitest + Supertest) |
+| `npm run lint`            | ESLint 10 (flat config) con le regole del backend |
+| `npm run lint:fix`        | ESLint con correzione automatica          |
+| `npm run format`          | Prettier sulla cartella `backend/`        |
+| `npm run format:check`    | Verifica la formattazione (exit 1 se cambia) |
 
 ## Avvio rapido — Frontend
 
@@ -215,7 +219,47 @@ vengono proxied dal dev-server Vite verso il backend su `http://localhost:4000`
 | `npm run dev`       | Dev-server Vite con proxy `/api`       |
 | `npm run build`     | Type-check (`tsc --noEmit`) + build    |
 | `npm run typecheck` | Solo controllo dei tipi                |
-| `npm run preview`   | Serve la build di produzione          |
+| `npm run preview`   | Serve la build di produzione            |
+| `npm run lint`      | ESLint 10 (flat config) + regole React  |
+| `npm run lint:fix`  | ESLint con correzione automatica        |
+| `npm run format`    | Prettier sulla cartella `frontend/`     |
+| `npm run format:check` | Verifica la formattazione            |
+
+## Qualità del codice (D3)
+
+- **TypeScript strict** su entrambi i package, con `noUncheckedIndexedAccess`:
+  un indice di array o una proprietà opzionale non si possono usare senza averli
+  controllati.
+- **ESLint 10** in *flat config* (`backend/eslint.config.mjs` e
+  `frontend/eslint.config.mjs`): `js.configs.recommended` +
+  `typescript-eslint/recommended`, più le regole scelte per questo progetto:
+  - `@typescript-eslint/no-explicit-any` è un **errore**: è la richiesta
+    letterale di D3, *nessun `any` non motivato*;
+  - `no-console` è un errore **ovunque tranne** in `src/utils/logger.ts`, l'unico
+    punto in cui si deve scrivere sulla console;
+  - sul frontend sono attive le due regole di `react-hooks` e
+    `react-refresh/only-export-components`. Quest'ultima produce **warning
+    motivati** su `GenrePills`, `SleepTimer` e `Toast`, che esportano costanti e
+    hook accanto al componente di proposito: la motivazione è scritta nel file;
+  - `public/sw.js` riceve le globali del *service worker* (`self`, `caches`,
+    `fetch`), altrimenti sarebbe soltanto una lista di falsi positivi.
+- **Prettier 3** con una configurazione unica alla radice (`.prettierrc.json`:
+  apici singoli, punto e virgola, virgole finali, 80 colonne) e un
+  `.prettierignore` che esclude ciò che **non è codice nostro**: il client Prisma
+  generato e il bundle **vendorizzato** di RapiDoc
+  (`backend/public/rapidoc-min.js`) non vanno riformattati, e la formattazione
+  non deve mai produrre modifiche a un file che non abbiamo scritto.
+- **I due strumenti non si contraddicono**: `eslint-config-prettier` chiude la
+  catena di configurazione e spegne le regole di formattazione di ESLint, così
+  l'unico responsabile dello stile è Prettier.
+
+```bash
+cd backend  && npm run lint && npm run format:check
+cd frontend && npm run lint && npm run format:check
+```
+
+Gli stessi due comandi girano in **CI** a ogni push e pull request, prima di
+typecheck, test e build.
 
 ## Fonte radio (B1)
 

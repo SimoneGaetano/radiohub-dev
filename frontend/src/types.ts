@@ -79,3 +79,19 @@ export interface Favorite {
 export interface FavoritesResponse {
   data: Favorite[];
 }
+
+/** Shape returned by `POST /api/ai/radio-info`. */
+export interface RadioInfoResponse {
+  data: {
+    radioId: string;
+    radioName: string;
+    bio: string;
+  };
+}
+
+/**
+ * State of the audio stream of the player, shown by the F2 status indicator:
+ * `idle` (nothing to play), `buffering` (connecting), `live` (playing) and
+ * `error` (the stream could not be started, see "Riprova").
+ */
+export type PlaybackStatus = 'idle' | 'buffering' | 'live' | 'error';

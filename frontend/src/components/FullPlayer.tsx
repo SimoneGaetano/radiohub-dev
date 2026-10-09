@@ -2,12 +2,14 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Heart,
   MapPin,
   Music,
   Pause,
   Play,
   Radio,
   Signal,
+  Info,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -15,12 +17,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import {
   playStation,
+  retryPlayback,
   setVolume,
   togglePlay,
 } from '../features/player/playerSlice';
 import type { RadioStation } from '../types';
 import { useAmbientColor } from '../hooks/useAmbientColor';
 import { Equalizer } from './Equalizer';
+import { SleepTimer } from './SleepTimer';
+import { useFavorite } from '../hooks/useFavorite';
+import { fetchRadioInfo } from '../features/posts/postsSlice';
+import { RadioInfoDrawer } from './RadioInfoDrawer';
+import { PlaybackStatusBadge } from './PlaybackStatusBadge';
 
 interface Props {
   /** Collapses the overlay back down to the bottom bar. */
@@ -45,7 +53,7 @@ function StationPreview({
   label: string;
 }) {
   const [broken, setBroken] = useState(false);
-  const showImage = station.favicon.length > 0 && !broken;
+  const showImage = station.favicon.trim().length > 0 && !broken;
 
   return (
     <button
@@ -63,7 +71,7 @@ function StationPreview({
         />
       ) : (
         <span className="flex h-full w-full items-center justify-center bg-slate-800">
-          <Radio className="h-8 w-8 text-emerald-400/70" aria-hidden="true" />
+          <Radio className="h-8 w-8 text-accent-text/70" aria-hidden="true" />
         </span>
       )}
     </button>
@@ -75,14 +83,17 @@ function StationPreview({
  */
 export function FullPlayer({ onClose }: Props) {
   const dispatch = useAppDispatch();
-  const { current, isPlaying, volume } = useAppSelector(
+  const { current, isPlaying, volume, playbackStatus } = useAppSelector(
     (state) => state.player,
   );
   const stations = useAppSelector((state) => state.radios.items);
   const ambientTint = useAmbientColor(current?.favicon ?? '');
+  const { isFavorite, toggle } = useFavorite(current);
 
   const [closing, setClosing] = useState(false);
   const [coverBroken, setCoverBroken] = useState(false);
+  /** Whether the "Info AI" drawer is visible over the overlay. */
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const closeTimerRef = useRef<number | null>(null);
   const lastVolumeRef = useRef(0.8);
@@ -104,16 +115,20 @@ export function FullPlayer({ onClose }: Props) {
     }, CLOSE_MS);
   }, []);
 
-  // Esc dismisses the overlay.
+  // Esc dismisses the info drawer first, then the overlay itself.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (infoOpen) {
+          setInfoOpen(false);
+          return;
+        }
         requestClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [requestClose]);
+  }, [requestClose, infoOpen]);
 
   // Freeze the page behind the overlay and drop any pending timer on unmount.
   useEffect(() => {
@@ -138,7 +153,7 @@ export function FullPlayer({ onClose }: Props) {
     return null;
   }
 
-  const showCover = current.favicon.length > 0 && !coverBroken;
+  const showCover = current.favicon.trim().length > 0 && !coverBroken;
   const genre = current.tags[0];
 
   const toggleMute = () => {
@@ -182,13 +197,13 @@ export function FullPlayer({ onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label={`Player a schermo intero: ${current.name}`}
-      className={`fixed inset-0 z-50 overflow-hidden bg-slate-950 ${
+      className={`palette-dark fixed inset-0 z-50 overflow-hidden bg-slate-950 ${
         closing ? 'fullplayer-out' : 'fullplayer-in'
       }`}
     >
       {/* Neutral dark base — also the fallback whenever no colour could be
           extracted from the artwork. */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-900 to-zinc-950 transition-colors duration-200 ease-out" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950 transition-colors duration-200 ease-out" />
 
       {/* Ambient tint from the artwork. The colour is cleared synchronously
           when the station changes, so the neutral base shows through at once
@@ -210,15 +225,15 @@ export function FullPlayer({ onClose }: Props) {
             type="button"
             onClick={requestClose}
             aria-label="Riduci il player a icona"
-            className="flex h-11 w-11 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-white"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-slate-300 transition hover:bg-slate-500/20 hover:text-slate-50"
           >
             <ChevronDown className="h-6 w-6" aria-hidden="true" />
           </button>
 
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-300">
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-500/30 bg-slate-500/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-300">
             <span
               className={`h-2 w-2 rounded-full ${
-                isPlaying ? 'bg-emerald-400' : 'bg-slate-500'
+                isPlaying ? 'bg-accent-soft' : 'bg-slate-500'
               }`}
               aria-hidden="true"
             />
@@ -240,7 +255,7 @@ export function FullPlayer({ onClose }: Props) {
                 onClick={playPrevious}
                 disabled={!previousStation}
                 aria-label="Riproduci la radio precedente"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900/40 disabled:text-slate-600 disabled:hover:border-slate-800"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-slate-500 hover:text-slate-50 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900/40 disabled:text-slate-600 disabled:hover:border-slate-800"
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -261,7 +276,7 @@ export function FullPlayer({ onClose }: Props) {
 
               {/* Fixed, identical cover box for every station, so the artwork's
                   intrinsic size can never shift the layout. */}
-              <div className="relative w-60 h-60 sm:w-64 sm:h-64 aspect-square shrink-0 overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10">
+              <div className="relative w-60 h-60 sm:w-64 sm:h-64 aspect-square shrink-0 overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-500/30">
                 {showCover ? (
                   <img
                     key={current.id}
@@ -279,7 +294,7 @@ export function FullPlayer({ onClose }: Props) {
                   </div>
                 )}
 
-                <div className="absolute bottom-2 right-2 rounded-full border border-white/10 bg-slate-950/80 px-2.5 py-1.5 backdrop-blur">
+                <div className="absolute bottom-2 right-2 rounded-full border border-slate-500/30 bg-slate-950/80 px-2.5 py-1.5 backdrop-blur">
                   <Equalizer playing={isPlaying} />
                 </div>
               </div>
@@ -303,7 +318,7 @@ export function FullPlayer({ onClose }: Props) {
                 onClick={playNext}
                 disabled={!nextStation}
                 aria-label="Riproduci la radio successiva"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900/40 disabled:text-slate-600 disabled:hover:border-slate-800"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 text-slate-300 transition hover:border-slate-500 hover:text-slate-50 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900/40 disabled:text-slate-600 disabled:hover:border-slate-800"
               >
                 <ChevronRight className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -311,15 +326,59 @@ export function FullPlayer({ onClose }: Props) {
 
             <div className="w-full max-w-2xl text-center">
               {genre ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-700/60 bg-emerald-950/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-emerald-300">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-accent-border/60 bg-emerald-950/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-accent-text">
                   <Music className="h-3.5 w-3.5" aria-hidden="true" />
                   {genre}
                 </span>
               ) : null}
 
-              <h1 className="mt-3 line-clamp-2 text-2xl font-bold leading-tight text-white sm:text-4xl">
-                {current.name}
-              </h1>
+              <div className="mt-3 flex items-center justify-center gap-3">
+                <h1 className="line-clamp-2 text-2xl font-bold leading-tight text-slate-50 sm:text-4xl">
+                  {current.name}
+                </h1>
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-label={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition duration-200 hover:bg-slate-500/20 ${
+                    isFavorite
+                      ? 'fill-rose-500 text-rose-500'
+                      : 'border border-slate-600 text-slate-300 hover:border-slate-400 hover:text-slate-50'
+                  }`}
+                >
+                  <Heart className="h-5 w-5" aria-hidden="true" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Open the drawer for the station currently playing and
+                    // (re)generate its AI bio through the Redux thunk.
+                    setInfoOpen(true);
+                    void dispatch(
+                      fetchRadioInfo({
+                        radioId: current.id,
+                        radioName: current.name,
+                        country: current.country || undefined,
+                        tags: current.tags,
+                      }),
+                    );
+                  }}
+                  aria-label={`Info AI su ${current.name}`}
+                  title="Info AI"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:bg-slate-500/20 hover:text-slate-50"
+                >
+                  <Info className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* F2 status indicator: connecting, live or broken stream. */}
+              <div className="mt-3 flex justify-center">
+                <PlaybackStatusBadge
+                  status={playbackStatus}
+                  onRetry={() => dispatch(retryPlayback())}
+                />
+              </div>
 
               <p className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-300">
                 {current.country ? (
@@ -357,7 +416,7 @@ export function FullPlayer({ onClose }: Props) {
                 aria-label={
                   volume > 0 ? "Disattiva l'audio" : "Riattiva l'audio"
                 }
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-white"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-300 transition hover:bg-slate-500/20 hover:text-slate-50"
               >
                 {volume > 0 ? (
                   <Volume2 className="h-5 w-5" aria-hidden="true" />
@@ -384,12 +443,12 @@ export function FullPlayer({ onClose }: Props) {
               </span>
             </div>
 
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => dispatch(togglePlay())}
                 aria-label={isPlaying ? 'Pausa' : 'Riproduci'}
-                className="flex h-15 w-15 items-center justify-center rounded-full bg-emerald-500 text-slate-950 shadow-xl transition hover:bg-emerald-400 active:scale-95"
+                className="flex h-15 w-15 items-center justify-center rounded-full bg-accent text-on-accent shadow-xl transition hover:bg-accent-soft active:scale-95"
               >
                 {isPlaying ? (
                   <Pause className="h-9 w-9" aria-hidden="true" />
@@ -397,10 +456,20 @@ export function FullPlayer({ onClose }: Props) {
                   <Play className="h-9 w-9" aria-hidden="true" />
                 )}
               </button>
+
+              <SleepTimer />
             </div>
           </div>
         </footer>
       </div>
+
+      {/* Info AI drawer: opened by the info button, shows the AI bio of
+          the station currently in play (loading / success / error states). */}
+      <RadioInfoDrawer
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        fallbackName={current.name}
+      />
     </div>
   );
 }

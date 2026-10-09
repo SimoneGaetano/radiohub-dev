@@ -29,7 +29,7 @@ export function Equalizer({
             animationDelay: `${index * 130}ms`,
             height: `${55 + index * 15}%`,
           }}
-          className={`w-[3px] rounded-full bg-emerald-400 ${
+          className={`w-[3px] rounded-full bg-accent-soft ${
             playing ? animation : ''
           }`}
         />

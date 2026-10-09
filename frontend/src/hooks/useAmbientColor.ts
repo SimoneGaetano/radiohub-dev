@@ -4,6 +4,20 @@ import { useEffect, useState } from 'react';
 /** A single canvas is reused for every station switch. */
 const averageColor = new FastAverageColor();
 
+/** API base used by the frontend (nginx/Vite proxy `/api` to the backend). */
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
+
+/**
+ * Reading canvas pixels requires the image to be CORS-enabled, and many radio
+ * hosts do not send the header: those stations used to fall back to the neutral
+ * gradient. Fetching the artwork through our own `/api/media` proxy makes the
+ * request **same-origin**, so the dominant colour is always available.
+ * The visible cover is still loaded directly (unchanged behaviour).
+ */
+function proxiedImageUrl(url: string): string {
+  return `${API_BASE}/media?url=${encodeURIComponent(url)}`;
+}
+
 /**
  * Maps any artwork colour into a mid tone: dark logos are lifted and bright
  * ones are pulled back, so the tint is always visible without ever blowing
@@ -47,7 +61,7 @@ export function useAmbientColor(url: string): string | null {
     }
 
     averageColor
-      .getColorAsync(url, {
+      .getColorAsync(proxiedImageUrl(url), {
         algorithm: 'dominant',
         crossOrigin: 'anonymous',
         silent: true,

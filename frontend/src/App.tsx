@@ -1,21 +1,16 @@
-import { useEffect, useState } from 'react';
-import { useAppDispatch } from './app/hooks';
+import { useState } from 'react';
 import { AuthModal } from './components/AuthModal';
+import { FavoritesSection } from './components/FavoritesSection';
 import { Header } from './components/Header';
 import { NewsSection } from './components/NewsSection';
 import { Player } from './components/Player';
 import { RadioGrid } from './components/RadioGrid';
+import { RecentStations } from './components/RecentStations';
 import { SearchBar } from './components/SearchBar';
 import { ToastProvider } from './components/Toast';
-import { fetchPosts } from './features/posts/postsSlice';
 
 export default function App() {
-  const dispatch = useAppDispatch();
   const [authOpen, setAuthOpen] = useState(false);
-
-  useEffect(() => {
-    void dispatch(fetchPosts());
-  }, [dispatch]);
 
   return (
     <ToastProvider>
@@ -25,6 +20,8 @@ export default function App() {
         <main className="mx-auto max-w-7xl space-y-8 px-4 pb-36 pt-6">
           <SearchBar />
           <RadioGrid />
+          <RecentStations />
+          <FavoritesSection />
           <NewsSection />
         </main>
 

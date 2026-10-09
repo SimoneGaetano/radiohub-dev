@@ -78,13 +78,25 @@ docsRouter.get('/docs', docsContentSecurityPolicy, (_req, res) => {
     <title>RadioHub API — documentazione</title>
     <script type="module" src="/api/docs/rapidoc-min.js"></script>
   </head>
-  <body style="margin: 0">
+  <body style="margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden">
     <!--
       RapiDoc 9.x registers the custom element as <rapi-doc> (the legacy
       <rapidoc> name is NOT defined by the bundle: using it silently produces a
       blank page). tests/docs.test.ts compares this tag against the
       customElements.define() calls found in the served bundle, so the mistake
       cannot come back unnoticed.
+    -->
+    <!--
+      L'altezza del componente è OBBLIGATORIA (flex: 1 + min-height: 0).
+      Senza di essa il contenitore interno di RapiDoc (main.main-content) non ha
+      un limite e cresce quanto tutto il documento: il suo genitore ha
+      overflow: hidden, che per specifica CSS INTERROMPE la catena dello scroll.
+      La rotellina del mouse quindi non scorre più la pagina, mentre scrollTo, lo
+      scrollIntoView dei link della barra laterale e la barra di scorrimento
+      continuano a funzionare: il difetto sembra "a intermittenza" e la pagina
+      sembra rotta solo a tratti. Con il componente limitato in altezza, RapiDoc
+      crea il proprio contenitore scrollabile interno e la rotellina torna a
+      funzionare. Verificato con eventi wheel reali via DevTools Protocol.
     -->
     <rapi-doc
       spec-url="/api/openapi.json"
@@ -96,10 +108,13 @@ docsRouter.get('/docs', docsContentSecurityPolicy, (_req, res) => {
       render-style="read"
       show-header
       show-info
+      style="flex: 1 1 auto; min-height: 0; width: 100%"
     ></rapi-doc>
-    <p style="font-family: system-ui; padding: 1rem">
+    <p
+      style="flex: 0 0 auto; margin: 0; padding: 0.5rem 1rem; border-top: 1px solid #334155; font-family: system-ui; font-size: 0.8rem; color: #94a3b8"
+    >
       Se la pagina non si carica, la specifica resta disponibile in JSON su
-      <a href="/api/openapi.json">/api/openapi.json</a>.
+      <a href="/api/openapi.json" style="color: #34d399">/api/openapi.json</a>.
     </p>
   </body>
 </html>

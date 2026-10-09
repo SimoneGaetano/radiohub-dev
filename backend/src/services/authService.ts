@@ -1,7 +1,10 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { compare, hash } from 'bcryptjs';
 import { sign, verify, type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import { env } from '../config/env';
 import { prisma } from '../db/prisma';
+import { redis } from '../redis/client';
+import { errorContext, logger } from '../utils/logger';
 
 const SALT_ROUNDS = 10;
 
@@ -102,6 +105,112 @@ export async function loginUser(
   });
 
   return { token, user: toPublicUser(user) };
+}
+
+/** Utente pubblico per id: serve al refresh, che conosce solo l'id di sessione. */
+export async function findPublicUser(id: string): Promise<PublicUser | null> {
+  const user = await prisma.user.findUnique({ where: { id } });
+  return user ? toPublicUser(user) : null;
+}
+
+/**
+ * Firma un access token JWT. Estratto da `loginUser` perché lo firma anche il
+ * refresh (X6): le due rotte devono emettere token identici, non due varianti.
+ */
+export function issueAccessToken(user: { id: string; email: string }): string {
+  const payload: AccessTokenPayload = { sub: user.id, email: user.email };
+  return sign(payload, env.JWT_SECRET, {
+    expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
+  });
+}
+
+/**
+ * X6 — refresh token.
+ *
+ * È un valore **opaco** (32 byte casuali, non un JWT) salvato in Redis: un JWT
+ * non si può revocare, un token in uno store sì — è esattamente il problema che
+ * il refresh risolve (logout vero, sessioni brevi, credenziali non ripetute).
+ *
+ * In Redis si salva l'**hash** del token, non il token: chi legge un dump di
+ * Redis non ottiene sessioni utilizzabili.
+ */
+function refreshTokenKey(token: string): string {
+  const digest = createHash('sha256').update(token).digest('hex');
+  return `auth:refresh:${digest}`;
+}
+
+/**
+ * Emette un refresh token e lo registra per l'utente.
+ *
+ * Restituisce `null` se Redis non risponde: la sessione breve resta valida, si
+ * perde solo la possibilità di rinnovarla. Scelta coerente con la cache di B3 —
+ * un Redis giù peggiora il servizio, non lo spegne.
+ */
+export async function issueRefreshToken(
+  userId: string,
+): Promise<string | null> {
+  const token = randomBytes(32).toString('base64url');
+
+  try {
+    await redis.set(
+      refreshTokenKey(token),
+      userId,
+      'EX',
+      env.REFRESH_TOKEN_TTL_SECONDS,
+    );
+    return token;
+  } catch (error) {
+    logger.warn('Refresh token store unavailable, session not renewable', {
+      ...errorContext(error),
+      userId,
+    });
+    return null;
+  }
+}
+
+/**
+ * Consuma un refresh token (**monouso**) e ne emette uno nuovo: è la rotazione,
+ * la pratica che limita la finestra di un token rubato. Un token già usato non
+ * esiste più nello store, quindi un secondo tentativo con lo stesso valore
+ * riceve `401`.
+ *
+ * Throws `AuthError(401)` se il token è sconosciuto o scaduto;
+ * `AuthError(503)` se Redis non risponde (è un guasto nostro, non un token
+ * invalido: il client non deve cancellare la sessione).
+ */
+export async function rotateRefreshToken(
+  token: string,
+): Promise<{ userId: string; refreshToken: string | null }> {
+  let userId: string | null;
+
+  try {
+    userId = await redis.get(refreshTokenKey(token));
+  } catch (error) {
+    logger.error('Refresh token store unavailable', errorContext(error));
+    throw new AuthError(503, 'Session store unavailable');
+  }
+
+  if (!userId) {
+    throw new AuthError(401, 'Invalid or expired refresh token');
+  }
+
+  await redis.del(refreshTokenKey(token));
+  const refreshToken = await issueRefreshToken(userId);
+
+  return { userId, refreshToken };
+}
+
+/**
+ * Revoca un refresh token (logout). Idempotente e silenziosa: un token
+ * sconosciuto produce lo stesso esito di uno valido, così la rotta non rivela
+ * se un token esisteva.
+ */
+export async function revokeRefreshToken(token: string): Promise<void> {
+  try {
+    await redis.del(refreshTokenKey(token));
+  } catch (error) {
+    logger.warn('Refresh token could not be revoked', errorContext(error));
+  }
 }
 
 /**

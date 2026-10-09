@@ -36,6 +36,12 @@ export interface AuthUser {
 
 export interface LoginResponse {
   token: string;
+  /**
+   * X6: gettone di rinnovo **monouso**, opaco e non un JWT. Vale `null` quando lo
+   * store delle sessioni non risponde: la sessione breve resta valida, si perde
+   * solo il rinnovo automatico.
+   */
+  refreshToken: string | null;
   user: AuthUser;
 }
 

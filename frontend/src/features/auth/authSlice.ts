@@ -1,7 +1,9 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
   api,
+  clearSession,
   extractErrorMessage,
+  REFRESH_TOKEN_STORAGE_KEY,
   TOKEN_STORAGE_KEY,
   USER_STORAGE_KEY,
 } from '../../services/api';
@@ -50,6 +52,13 @@ export const login = createAsyncThunk<
     const { data } = await api.post<LoginResponse>('/auth/login', credentials);
     localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+    // X6: il gettone di rinnovo sta solo in localStorage — lo legge
+    // l'interceptor di `services/api.ts`, l'interfaccia non lo mostra.
+    if (data.refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refreshToken);
+    } else {
+      localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+    }
     return data;
   } catch (error) {
     return rejectWithValue(extractErrorMessage(error));
@@ -73,10 +82,24 @@ export const register = createAsyncThunk<
   }
 });
 
-/** Clears the persisted session. */
+/**
+ * Clears the persisted session. X6: prima azzera il gettone sul server, così il
+ * logout non è solo un gesto locale — senza questa chiamata il JWT resterebbe
+ * rinnovabile fino alla sua scadenza.
+ */
 export const logout = createAsyncThunk('auth/logout', async () => {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-  localStorage.removeItem(USER_STORAGE_KEY);
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+
+  if (refreshToken) {
+    try {
+      await api.post('/auth/logout', { refreshToken });
+    } catch {
+      // Best effort dichiarato: se la rete o il server non rispondono, la
+      // sessione locale si chiude comunque e il gettone scadrà da solo.
+    }
+  }
+
+  clearSession();
 });
 
 const authSlice = createSlice({

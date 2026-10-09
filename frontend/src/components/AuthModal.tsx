@@ -116,7 +116,9 @@ export function AuthModal({ open, onClose }: Props) {
             disabled={busy}
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {busy && (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            )}
             {mode === 'login' ? 'Accedi' : 'Registrati'}
           </button>
         </form>

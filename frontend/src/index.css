@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /*
  * Token aggiuntivi del tema (bonus X7). In Tailwind 4 `@theme` definisce
@@ -134,7 +134,6 @@ body,
   --color-red-900: #fecaca;
   --color-red-950: #fef2f2;
 }
-
 
 /* --- Full-screen player overlay --------------------------------------- */
 @keyframes player-overlay-in {

@@ -1,6 +1,10 @@
 import { Clock, Radio, Trash2 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
-import { clearRecents, clearServerRecents, playStation } from '../features/player/playerSlice';
+import {
+  clearRecents,
+  clearServerRecents,
+  playStation,
+} from '../features/player/playerSlice';
 import type { RadioStation } from '../types';
 import { useToast } from './Toast';
 
@@ -11,7 +15,9 @@ import { useToast } from './Toast';
 export function RecentStations() {
   const dispatch = useAppDispatch();
   const { showToast } = useToast();
-  const { recentIds, recentStations, current } = useAppSelector((state) => state.player);
+  const { recentIds, recentStations, current } = useAppSelector(
+    (state) => state.player,
+  );
 
   const stations = recentIds
     .map((id) => recentStations[id])
@@ -46,43 +52,45 @@ export function RecentStations() {
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-1 pt-2.5">
-  {stations.map((station) => {
-    const isCurrent = current?.id === station.id;
-    return (
-      <button
-        key={station.id}
-        type="button"
-        onClick={() => dispatch(playStation(station))}
-        title={station.name}
-        aria-label={`Riascolta ${station.name}`}
-        className="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"
-      >
-        <span
-          className={`relative block h-14 w-14 overflow-hidden rounded-lg bg-slate-800 ${
-            isCurrent ? 'ring-2 ring-accent-border' : ''
-          }`}
-        >
-          <Radio
-            className="absolute inset-0 m-auto h-5 w-5 text-slate-500"
-            aria-hidden="true"
-          />
-          {station.favicon.trim() ? (
-            <img
-              src={station.favicon}
-              alt=""
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover"
-              onError={(event) => {
-                event.currentTarget.style.visibility = 'hidden';
-              }}
-            />
-          ) : null}
-        </span>
-        <span className="w-full truncate text-xs text-slate-300">{station.name}</span>
-      </button>
-    );
-  })}
-</div>
+        {stations.map((station) => {
+          const isCurrent = current?.id === station.id;
+          return (
+            <button
+              key={station.id}
+              type="button"
+              onClick={() => dispatch(playStation(station))}
+              title={station.name}
+              aria-label={`Riascolta ${station.name}`}
+              className="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"
+            >
+              <span
+                className={`relative block h-14 w-14 overflow-hidden rounded-lg bg-slate-800 ${
+                  isCurrent ? 'ring-2 ring-accent-border' : ''
+                }`}
+              >
+                <Radio
+                  className="absolute inset-0 m-auto h-5 w-5 text-slate-500"
+                  aria-hidden="true"
+                />
+                {station.favicon.trim() ? (
+                  <img
+                    src={station.favicon}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.visibility = 'hidden';
+                    }}
+                  />
+                ) : null}
+              </span>
+              <span className="w-full truncate text-xs text-slate-300">
+                {station.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </section>
   );
 }

@@ -64,9 +64,8 @@ export function clearInstallPrompt(): void {
 
 /** `true` when the app already runs as an installed PWA (standalone mode). */
 export function isStandalone(): boolean {
-  const navigatorStandalone = (
-    window.navigator as { standalone?: boolean }
-  ).standalone;
+  const navigatorStandalone = (window.navigator as { standalone?: boolean })
+    .standalone;
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
     navigatorStandalone === true

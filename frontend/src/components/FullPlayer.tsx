@@ -339,7 +339,11 @@ export function FullPlayer({ onClose }: Props) {
                 <button
                   type="button"
                   onClick={toggle}
-                  aria-label={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+                  aria-label={
+                    isFavorite
+                      ? 'Rimuovi dai preferiti'
+                      : 'Aggiungi ai preferiti'
+                  }
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition duration-200 hover:bg-slate-500/20 ${
                     isFavorite
                       ? 'fill-rose-500 text-rose-500'

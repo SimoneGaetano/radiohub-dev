@@ -10,11 +10,7 @@ interface Props {
 /**
  * Four green bars that pulse with the playback and stand still when paused.
  */
-export function Equalizer({
-  playing,
-  className = 'h-5',
-  mini = false,
-}: Props) {
+export function Equalizer({ playing, className = 'h-5', mini = false }: Props) {
   const animation = mini ? 'eq-bar-mini' : 'eq-bar';
 
   return (

@@ -85,7 +85,9 @@ export function NewsSection() {
    * cache of B3.
    */
   useEffect(() => {
-    void dispatch(fetchPosts(appliedTitle ? { title: appliedTitle } : undefined));
+    void dispatch(
+      fetchPosts(appliedTitle ? { title: appliedTitle } : undefined),
+    );
   }, [dispatch, appliedTitle]);
 
   useEffect(() => {
@@ -285,7 +287,10 @@ export function NewsSection() {
                 className="inline-flex items-center gap-2 self-start rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-accent-border hover:text-accent-text disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSummarizing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  <Loader2
+                    className="h-3.5 w-3.5 animate-spin"
+                    aria-hidden="true"
+                  />
                 ) : summaryText ? (
                   isExpanded ? (
                     <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />

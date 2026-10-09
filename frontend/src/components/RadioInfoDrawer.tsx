@@ -55,7 +55,10 @@ export function RadioInfoDrawer({ open, onClose, fallbackName }: Props) {
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Info className="h-5 w-5 shrink-0 text-amber-400" aria-hidden="true" />
+            <Info
+              className="h-5 w-5 shrink-0 text-amber-400"
+              aria-hidden="true"
+            />
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-400">
                 Info AI

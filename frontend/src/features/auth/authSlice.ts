@@ -45,39 +45,33 @@ export const login = createAsyncThunk<
   LoginResponse,
   Credentials,
   { rejectValue: string }
->(
-  'auth/login',
-  async (credentials, { rejectWithValue }) => {
-    try {
-      const { data } = await api.post<LoginResponse>('/auth/login', credentials);
-      localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-      return data;
-    } catch (error) {
-      return rejectWithValue(extractErrorMessage(error));
-    }
-  },
-);
+>('auth/login', async (credentials, { rejectWithValue }) => {
+  try {
+    const { data } = await api.post<LoginResponse>('/auth/login', credentials);
+    localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+    return data;
+  } catch (error) {
+    return rejectWithValue(extractErrorMessage(error));
+  }
+});
 
 /** Creates an account (password is hashed server side). */
 export const register = createAsyncThunk<
   AuthUser,
   Credentials,
   { rejectValue: string }
->(
-  'auth/register',
-  async (credentials, { rejectWithValue }) => {
-    try {
-      const { data } = await api.post<RegisterResponse>(
-        '/auth/register',
-        credentials,
-      );
-      return data.user;
-    } catch (error) {
-      return rejectWithValue(extractErrorMessage(error));
-    }
-  },
-);
+>('auth/register', async (credentials, { rejectWithValue }) => {
+  try {
+    const { data } = await api.post<RegisterResponse>(
+      '/auth/register',
+      credentials,
+    );
+    return data.user;
+  } catch (error) {
+    return rejectWithValue(extractErrorMessage(error));
+  }
+});
 
 /** Clears the persisted session. */
 export const logout = createAsyncThunk('auth/logout', async () => {

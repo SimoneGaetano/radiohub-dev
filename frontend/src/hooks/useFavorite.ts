@@ -1,5 +1,8 @@
 import { useAppDispatch, useAppSelector } from '../app/hooks';
-import { pushFavoriteChange, toggleFavorite } from '../features/player/playerSlice';
+import {
+  pushFavoriteChange,
+  toggleFavorite,
+} from '../features/player/playerSlice';
 import type { RadioStation } from '../types';
 import { useToast } from '../components/Toast';
 
@@ -26,7 +29,9 @@ export function useFavorite(station: RadioStation | null) {
     } else {
       showToast(`“${station.name}” aggiunta ai preferiti`, 'success');
     }
-    void dispatch(pushFavoriteChange({ radioId: station.id, added: !isFavorite }));
+    void dispatch(
+      pushFavoriteChange({ radioId: station.id, added: !isFavorite }),
+    );
   };
 
   return { isFavorite, toggle };

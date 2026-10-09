@@ -62,7 +62,10 @@ export function PlaybackStatusBadge({
       aria-live="polite"
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-300 mt-1 ${className}`}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
+      <span
+        className="h-1.5 w-1.5 rounded-full bg-red-500"
+        aria-hidden="true"
+      />
       {compact ? 'Errore' : 'Errore di riproduzione'}
       {onRetry ? (
         <button

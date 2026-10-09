@@ -1,3 +1,8 @@
+/* eslint-disable react-refresh/only-export-components --
+   Il modulo esporta le costanti `PILL_QUERIES` (e i tipi) accanto al componente
+   perché sono la stessa informazione: `SearchBar` le legge per costruire la
+   query della pill attiva. Spostarle in un altro file per zittire un warning di
+   fast-refresh peggiorerebbe la coesione. */
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';

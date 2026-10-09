@@ -1,3 +1,7 @@
+/* eslint-disable react-refresh/only-export-components --
+   Il modulo esporta la funzione `formatRemaining` accanto al componente: è la
+   stessa logica di formattazione del conto alla rovescia, e separarla in un
+   altro file la renderebbe raggiungibile da fuori senza motivo. */
 import { Timer, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';

@@ -27,7 +27,10 @@ export function RadioGrid() {
     return (
       <div role="status" aria-label="Caricamento delle radio">
         <span className="sr-only">Caricamento delle radio…</span>
-        <div aria-hidden="true" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          aria-hidden="true"
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {Array.from({ length: SKELETON_COUNT }, (_, index) => (
             <RadioSkeleton key={index} />
           ))}
@@ -41,9 +44,14 @@ export function RadioGrid() {
       <div className="space-y-3">
         <GenrePills />
         <div className="flex items-start gap-3 rounded-lg border border-red-900 bg-red-950/40 p-4 text-sm text-red-200">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <AlertTriangle
+            className="mt-0.5 h-4 w-4 shrink-0"
+            aria-hidden="true"
+          />
           <span>
-            <strong className="block font-semibold">Errore durante la ricerca</strong>
+            <strong className="block font-semibold">
+              Errore durante la ricerca
+            </strong>
             {error}
           </span>
         </div>

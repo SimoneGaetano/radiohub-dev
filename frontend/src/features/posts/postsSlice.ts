@@ -1,5 +1,9 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { api, extractErrorMessage, TOKEN_STORAGE_KEY } from '../../services/api';
+import {
+  api,
+  extractErrorMessage,
+  TOKEN_STORAGE_KEY,
+} from '../../services/api';
 import type {
   Post,
   PostsResponse,
@@ -109,7 +113,9 @@ export const summarizePost = createAsyncThunk<
   { rejectValue: string }
 >('posts/summarize', async (postId, { rejectWithValue }) => {
   try {
-    const { data } = await api.post<SummaryResponse>(`/posts/${postId}/summary`);
+    const { data } = await api.post<SummaryResponse>(
+      `/posts/${postId}/summary`,
+    );
     return data.data;
   } catch (error) {
     return rejectWithValue(extractErrorMessage(error));
@@ -186,7 +192,9 @@ const postsSlice = createSlice({
       })
       .addCase(summarizePost.fulfilled, (state, action) => {
         state.summarizingId = null;
-        const target = state.items.find((post) => post.id === action.payload.id);
+        const target = state.items.find(
+          (post) => post.id === action.payload.id,
+        );
         if (target) {
           target.summary = action.payload.summary;
         }

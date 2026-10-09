@@ -1,5 +1,17 @@
+/* eslint-disable react-refresh/only-export-components --
+   Il modulo esporta l'hook `useToast` accanto al provider: sono la stessa API
+   (context + hook di lettura) e dividerli in due file obbligherebbe ogni
+   consumatore a due import. */
 import { AlertTriangle, Check, Info, X } from 'lucide-react';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { ReactNode } from 'react';
 
 export type ToastTone = 'success' | 'error' | 'info';
@@ -34,7 +46,9 @@ function ToneIcon({ tone }: { tone: ToastTone }) {
     return <Check className="h-4 w-4 text-accent-text" aria-hidden="true" />;
   }
   if (tone === 'error') {
-    return <AlertTriangle className="h-4 w-4 text-red-400" aria-hidden="true" />;
+    return (
+      <AlertTriangle className="h-4 w-4 text-red-400" aria-hidden="true" />
+    );
   }
   return <Info className="h-4 w-4 text-slate-400" aria-hidden="true" />;
 }
@@ -65,8 +79,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, tone: ToastTone = 'info') => {
       const id = nextIdRef.current;
       nextIdRef.current += 1;
-      setItems((current) => [...current.slice(-(MAX_VISIBLE - 1)), { id, message, tone }]);
-      timersRef.current.push(window.setTimeout(() => dismiss(id), TOAST_DURATION_MS));
+      setItems((current) => [
+        ...current.slice(-(MAX_VISIBLE - 1)),
+        { id, message, tone },
+      ]);
+      timersRef.current.push(
+        window.setTimeout(() => dismiss(id), TOAST_DURATION_MS),
+      );
     },
     [dismiss],
   );
@@ -97,7 +116,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           >
             <ToneIcon tone={item.tone} />
 
-            <p className="flex-1 text-sm leading-5 text-slate-200">{item.message}</p>
+            <p className="flex-1 text-sm leading-5 text-slate-200">
+              {item.message}
+            </p>
 
             <button
               type="button"

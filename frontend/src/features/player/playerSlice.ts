@@ -1,6 +1,10 @@
 ﻿import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { api, extractErrorMessage, TOKEN_STORAGE_KEY } from '../../services/api';
+import {
+  api,
+  extractErrorMessage,
+  TOKEN_STORAGE_KEY,
+} from '../../services/api';
 import type {
   FavoritesResponse,
   PlaybackStatus,
@@ -116,10 +120,10 @@ function hasSession(): boolean {
 
 /** Moves a station to the front of the recents, trimming to MAX_RECENTS. */
 function pushRecent(state: PlayerState, station: RadioStation): void {
-  const ids = [station.id, ...state.recentIds.filter((id) => id !== station.id)].slice(
-    0,
-    MAX_RECENTS,
-  );
+  const ids = [
+    station.id,
+    ...state.recentIds.filter((id) => id !== station.id),
+  ].slice(0, MAX_RECENTS);
   const stations: Record<string, RadioStation> = {
     ...state.recentStations,
     [station.id]: station,
@@ -317,7 +321,11 @@ const playerSlice = createSlice({
       }
 
       const current = libraryKeys(state.libraryOwner);
-      writeLibrary(current.favorites, state.favoriteIds, state.favoriteStations);
+      writeLibrary(
+        current.favorites,
+        state.favoriteIds,
+        state.favoriteStations,
+      );
       writeLibrary(current.recents, state.recentIds, state.recentStations);
 
       const target = libraryKeys(owner);
@@ -404,17 +412,20 @@ export const pushFavoriteChange = createAsyncThunk<
   void,
   FavoriteChange,
   { rejectValue: string }
->('player/pushFavoriteChange', async ({ radioId, added }, { rejectWithValue }) => {
-  try {
-    if (added) {
-      await api.post('/favorites', { radioId });
-    } else {
-      await api.delete(`/favorites/${encodeURIComponent(radioId)}`);
+>(
+  'player/pushFavoriteChange',
+  async ({ radioId, added }, { rejectWithValue }) => {
+    try {
+      if (added) {
+        await api.post('/favorites', { radioId });
+      } else {
+        await api.delete(`/favorites/${encodeURIComponent(radioId)}`);
+      }
+    } catch (error) {
+      return rejectWithValue(extractErrorMessage(error));
     }
-  } catch (error) {
-    return rejectWithValue(extractErrorMessage(error));
-  }
-});
+  },
+);
 
 /**
  * After login: pushes the local favourite ids to the backend, then reloads

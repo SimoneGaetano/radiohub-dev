@@ -40,8 +40,15 @@ function isHlsUrl(url: string): boolean {
 export function Player() {
   const dispatch = useAppDispatch();
   const { showToast } = useToast();
-  const { current, isPlaying, volume, expanded, sleepEndsAt, playbackStatus, attempt } =
-    useAppSelector((state) => state.player);
+  const {
+    current,
+    isPlaying,
+    volume,
+    expanded,
+    sleepEndsAt,
+    playbackStatus,
+    attempt,
+  } = useAppSelector((state) => state.player);
   const stations = useAppSelector((state) => state.radios.items);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -307,8 +314,11 @@ export function Player() {
     try {
       media.metadata = new MediaMetadata({
         title: current.name,
-        artist: [current.country, current.language].filter(Boolean).join(' · ') || 'RadioHub',
-        album: current.bitrate > 0 ? `${current.bitrate} kbps` : 'Radio dal mondo',
+        artist:
+          [current.country, current.language].filter(Boolean).join(' · ') ||
+          'RadioHub',
+        album:
+          current.bitrate > 0 ? `${current.bitrate} kbps` : 'Radio dal mondo',
         artwork:
           current.favicon.length > 0
             ? [{ src: current.favicon, sizes: '512x512', type: 'image/png' }]
@@ -357,10 +367,19 @@ export function Player() {
       }
       const target = event.target as HTMLElement | null;
       const tag = target?.tagName.toLowerCase() ?? '';
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+      if (
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        target?.isContentEditable
+      ) {
         return;
       }
-      if ([' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+      if (
+        [' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(
+          event.key,
+        )
+      ) {
         event.preventDefault();
       }
       switch (event.key) {
@@ -446,102 +465,102 @@ export function Player() {
         <audio ref={audioRef} className="hidden" />
 
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
-  <button
-    type="button"
-    onClick={(event) => {
-      event.stopPropagation();
-      dispatch(togglePlay());
-    }}
-    aria-label={isPlaying ? 'Pausa' : 'Riproduci'}
-    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent transition hover:bg-accent-soft"
-  >
-    {isPlaying ? (
-      <Pause className="h-5 w-5" aria-hidden="true" />
-    ) : (
-      <Play className="h-5 w-5" aria-hidden="true" />
-    )}
-  </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              dispatch(togglePlay());
+            }}
+            aria-label={isPlaying ? 'Pausa' : 'Riproduci'}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent transition hover:bg-accent-soft"
+          >
+            {isPlaying ? (
+              <Pause className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Play className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
 
-  <div className="min-w-0 flex-1">
-    <div className="flex items-center gap-2">
-      <p className="min-w-0 truncate text-sm font-semibold text-slate-100">
-        {current.name}
-      </p>
-      <Equalizer
-        playing={isPlaying}
-        mini
-        className={`h-3 ${isPlaying ? 'opacity-100' : 'opacity-40'}`}
-      />
-    </div>
-    
-    {/* Riga modificata: mt-[3px] per abbassare tutto e items-center per allineare gli elementi */}
-    <div className="flex min-w-0 items-center gap-2 mt-[5px]">
-      <p className="min-w-0 truncate text-xs text-slate-400">
-        {[current.country, current.language].filter(Boolean).join(' · ') ||
-          '—'}
-        {current.bitrate > 0 ? ` · ${current.bitrate} kbps` : ''}
-      </p>
-      <PlaybackStatusBadge
-        status={playbackStatus}
-        onRetry={handleRetry}
-        compact
-      />
-    </div>
-  </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 truncate text-sm font-semibold text-slate-100">
+                {current.name}
+              </p>
+              <Equalizer
+                playing={isPlaying}
+                mini
+                className={`h-3 ${isPlaying ? 'opacity-100' : 'opacity-40'}`}
+              />
+            </div>
 
-  <div
-    onClick={stopBubble}
-    className="hidden items-center gap-2 sm:flex"
-  >
-    <Volume2 className="h-4 w-4 text-slate-400" aria-hidden="true" />
-    <input
-      type="range"
-      min={0}
-      max={100}
-      step={1}
-      value={Math.round(volume * 100)}
-      onChange={(event) =>
-        dispatch(setVolume(Number(event.target.value) / 100))
-      }
-      aria-label="Volume"
-      className="h-1 w-28 cursor-pointer accent-emerald-500"
-    />
-  </div>
+            {/* Riga modificata: mt-[3px] per abbassare tutto e items-center per allineare gli elementi */}
+            <div className="flex min-w-0 items-center gap-2 mt-[5px]">
+              <p className="min-w-0 truncate text-xs text-slate-400">
+                {[current.country, current.language]
+                  .filter(Boolean)
+                  .join(' · ') || '—'}
+                {current.bitrate > 0 ? ` · ${current.bitrate} kbps` : ''}
+              </p>
+              <PlaybackStatusBadge
+                status={playbackStatus}
+                onRetry={handleRetry}
+                compact
+              />
+            </div>
+          </div>
 
-  <button
-    type="button"
-    onClick={(event) => {
-      event.stopPropagation();
-      openFullPlayer();
-    }}
-    aria-label="Apri il player a schermo intero"
-    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-500/20 hover:text-slate-50"
-  >
-    <ChevronUp className="h-5 w-5" aria-hidden="true" />
-  </button>
+          <div
+            onClick={stopBubble}
+            className="hidden items-center gap-2 sm:flex"
+          >
+            <Volume2 className="h-4 w-4 text-slate-400" aria-hidden="true" />
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={Math.round(volume * 100)}
+              onChange={(event) =>
+                dispatch(setVolume(Number(event.target.value) / 100))
+              }
+              aria-label="Volume"
+              className="h-1 w-28 cursor-pointer accent-emerald-500"
+            />
+          </div>
 
-  <span
-    onClick={(event) => event.stopPropagation()}
-    className="flex shrink-0 items-center"
-  >
-    <SleepTimer compact />
-  </span>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              openFullPlayer();
+            }}
+            aria-label="Apri il player a schermo intero"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-500/20 hover:text-slate-50"
+          >
+            <ChevronUp className="h-5 w-5" aria-hidden="true" />
+          </button>
 
-  <button
-    type="button"
-    onClick={(event) => {
-      // Stop bubbling: the bar itself opens the full-screen overlay,
-      // so without this the player would reopen while closing.
-      event.stopPropagation();
-      dismissPlayer();
-    }}
-    aria-label="Chiudi completamente il player"
-    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-500/20 hover:text-slate-50"
-  >
-    <X className="h-5 w-5" aria-hidden="true" />
-  </button>
-</div>
+          <span
+            onClick={(event) => event.stopPropagation()}
+            className="flex shrink-0 items-center"
+          >
+            <SleepTimer compact />
+          </span>
 
+          <button
+            type="button"
+            onClick={(event) => {
+              // Stop bubbling: the bar itself opens the full-screen overlay,
+              // so without this the player would reopen while closing.
+              event.stopPropagation();
+              dismissPlayer();
+            }}
+            aria-label="Chiudi completamente il player"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-500/20 hover:text-slate-50"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {expanded ? <FullPlayer onClose={closeFullPlayer} /> : null}

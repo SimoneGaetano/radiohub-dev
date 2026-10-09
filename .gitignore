@@ -21,3 +21,11 @@ yarn-error.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# Traccia della prova: documento riservato, non deve mai finire nel repository
+Progetto test 22HBG*.pdf
+
+# File di lavoro locali: screenshot di verifica e script temporanei
+diag.png
+frontend/shot-*.png
+frontend/tmp-*.mjs

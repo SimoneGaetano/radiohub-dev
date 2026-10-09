@@ -216,6 +216,55 @@ vengono proxied dal dev-server Vite verso il backend su `http://localhost:4000`
 | `npm run typecheck` | Solo controllo dei tipi                |
 | `npm run preview`   | Serve la build di produzione          |
 
+## Fonte radio (B1)
+
+La ricerca radio parla prima con **FM-World**, la fonte indicata dalla traccia:
+`GET {FM_WORLD_API_BASE_URL}/radios?query=<testo>&limit=<n>` con
+`Authorization: Bearer <token>`. Il token sta **solo lato server** (variabile
+d'ambiente: mai nel bundle del frontend, mai in una risposta, mai nel
+repository — `.env` è ignorato da git).
+
+Ogni risposta dichiara **chi ha risposto per davvero**:
+
+```json
+{
+  "meta": {
+    "source": "radio-browser",
+    "fallback": {
+      "from": "fm-world",
+      "to": "radio-browser",
+      "reason": "HTTP 403"
+    }
+  }
+}
+```
+
+`meta.source` è la fonte che ha prodotto i dati; `meta.fallback` è valorizzato
+quando la ricerca **non** è passata dal percorso primario e ne dice il motivo.
+Le stesse informazioni sono negli header `X-Radio-Source` e `X-Cache`.
+
+Tre scelte dichiarate:
+
+- **Il fallback non è silenzioso.** Un fallback invisibile sarebbe
+  indistinguibile da un provider che funziona: la risposta dice sempre da dove
+  arrivano i dati e perché è stato usato il fallback, e ogni fallback finisce nei
+  log strutturati (`FM-World failed: falling back to Radio Browser` + `reason`).
+- **Radio Browser resta configurato per i due casi che FM-World non copre**: le
+  pill di genere usano filtri (`tag`, `countryCode`, `bitrateMin`, `order`) che
+  l'API di FM-World non espone — espone solo `query` e `limit` — e preferiti e
+  cronologia hanno bisogno di una ricerca **per id**, che su FM-World non esiste.
+- **Il fallback è automatico** su token mancante, `401`/`403`, timeout e payload
+  inatteso. Se cadono entrambe le fonti la risposta resta quella richiesta dalla
+  traccia: `502` fonte non raggiungibile, `504` timeout.
+
+**Misura sul campo** (riproducibile): con il token fornito con il documento,
+`connect.fm-world.com/client2/radios?query=jazz&limit=2` risponde
+**`403 Forbidden`**; senza header, **`401 Invalid authorization token`**. Il
+token è quindi riconosciuto ma non autorizzato (scaduto, oppure senza permessi
+su quell'endpoint): è il motivo per cui l'app espone `fallback.reason = "HTTP
+403"` e continua a funzionare. Con un token valido il percorso primario si
+attiva **senza modificare una riga**.
+
 ## Ingestione delle notizie (B2)
 
 Il backend è l'unico punto di accesso alle fonti esterne: il feed notizie
@@ -427,17 +476,24 @@ possono rispondere 4xx).
 
 ## Limiti noti
 
-- **B1 — sorgente radio**: il client usa l'API pubblica Radio Browser
-  (`RADIO_API_BASE_URL`), mentre la traccia indica FM-World con token Bearer
-  (`connect.fm-world.com/client2/radios`). La discordanza resta da chiarire: il
-  proxy, la normalizzazione, la cache e la gestione 502/504 sono già quelli
-  richiesti, cambia solo il client HTTP e l'aggiunta dell'header `Authorization`.
-  Il parametro di ricerca accetta **sia `query`** (il nome usato dalla traccia)
-  **sia `q`** (quello usato dal frontend): coperto dai test e verificato a mano
-  su `/api/radios?query=jazz`.
-- **F3 — frontend notizie**: la sezione Notizie elenca i post e attiva il riassunto
-  AI, ma il filtro per titolo e la paginazione/scroll infinito della UI sono ancora
-  da implementare (l'API li supporta già).
+- **B1 — token FM-World fornito non più valido**: il percorso primario esiste e
+  viene tentato a ogni ricerca, ma il token del documento risponde `403
+  Forbidden` (misurato; `401` senza token), quindi oggi ogni ricerca passa dal
+  fallback Radio Browser con `fallback.reason = "HTTP 403"`. Domanda aperta per
+  `nico.montanari@22hbg.it`: il token è scaduto o va richiesto con permessi
+  diversi? Con un token valido non serve cambiare codice.
+- **B1 — payload di successo di FM-World non osservabile**: proprio perché il
+  token risponde `403` e l'endpoint non ha documentazione pubblica, la struttura
+  della risposta non è verificabile. Il mapper è perciò **tollerante** (prova più
+  nomi di campo) e un payload non riconosciuto non produce una lista vuota ma un
+  fallback; i test unitari usano payload plausibili, non osservati.
+- **B1 — parametro di ricerca**: accettati **sia `query`** (il nome usato dalla
+  traccia) **sia `q`** (quello usato dal frontend), coperti dai test.
+- **B1 — Radio Browser su un mirror singolo**: la ricerca usa
+  `de1.api.radio-browser.info`, che sotto rate limit ha risposto `503` durante la
+  verifica (→ `502` coerente verso il client). La documentazione di Radio Browser
+  consiglia il nome `all.api.radio-browser.info` (round-robin sui nodi sani):
+  cambiarlo è una variabile d'ambiente, non una modifica al codice.
 - **Seed**: il seed crea **un solo** contenuto di esempio, dichiarato come tale
   ("non è una notizia reale"): le notizie arrivano dal feed, non da contenuti
   inventati. Il seed ora parte **automaticamente** all'avvio del backend (D1).

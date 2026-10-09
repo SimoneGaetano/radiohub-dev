@@ -4,6 +4,8 @@ import { errorContext, logger } from '../utils/logger';
 import {
   fetchRadios,
   fetchStationsByIds,
+  type RadioFallbackInfo,
+  type RadioProvider,
   type RadioSearchParams,
   type RadioStation,
 } from './radioSource';
@@ -13,7 +15,30 @@ export type CacheStatus = 'HIT' | 'MISS';
 export interface RadioSearchResult {
   stations: RadioStation[];
   cache: CacheStatus;
+  /** Chi ha risposto alla ricerca (B1): `fm-world` oppure il fallback. */
+  provider: RadioProvider;
+  /** Valorizzato quando la ricerca **non** è passata da FM-World. */
+  fallback: RadioFallbackInfo | null;
 }
+
+/**
+ * Forma salvata in Redis per una ricerca: oltre alle stazioni conserva la
+ * provenienza, altrimenti su una HIT non si saprebbe più chi ha risposto.
+ */
+interface CachedSearch {
+  stations: RadioStation[];
+  provider: RadioProvider;
+  fallback: RadioFallbackInfo | null;
+}
+
+/**
+ * La risoluzione per id (preferiti e cronologia) non ha un equivalente su
+ * FM-World: quella rotta parla sempre con Radio Browser.
+ */
+const BY_IDS_PROVENANCE = {
+  provider: 'radio-browser' as RadioProvider,
+  fallback: null,
+} as const;
 
 /**
  * Deterministic cache key derived from the search parameters, e.g.
@@ -37,13 +62,21 @@ export function buildCacheKey(params: RadioSearchParams): string {
     .join('&');
 }
 
-async function readCache(key: string): Promise<RadioStation[] | null> {
+/**
+ * Legge una voce di cache e la valida con il parser della forma attesa: una voce
+ * scritta da una versione precedente (o corrotta) diventa una MISS invece di un
+ * errore a metà strada.
+ */
+async function readCache<T>(
+  key: string,
+  parse: (value: unknown) => T | null,
+): Promise<T | null> {
   try {
     const raw = await redis.get(key);
     if (!raw) {
       return null;
     }
-    return JSON.parse(raw) as RadioStation[];
+    return parse(JSON.parse(raw) as unknown);
   } catch (error) {
     // A cache failure must never break the request: degrade to a MISS.
     logger.warn('Cache read failed, falling back to upstream', {
@@ -54,13 +87,52 @@ async function readCache(key: string): Promise<RadioStation[] | null> {
   }
 }
 
+/** Risoluzione per id: in cache c'è il solo elenco delle stazioni. */
+function parseStationList(value: unknown): RadioStation[] | null {
+  return Array.isArray(value) ? (value as RadioStation[]) : null;
+}
+
+/**
+ * Ricerca salvata in cache. Le voci scritte prima del fallback (B1) erano il
+ * solo array delle stazioni: vengono lette come Radio Browser — che era l'unica
+ * fonte — invece di essere scartate.
+ */
+function parseCachedSearch(value: unknown): CachedSearch | null {
+  if (Array.isArray(value)) {
+    return {
+      stations: value as RadioStation[],
+      provider: 'radio-browser',
+      fallback: null,
+    };
+  }
+
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as { stations?: unknown }).stations)
+  ) {
+    const record = value as {
+      stations: RadioStation[];
+      provider?: unknown;
+      fallback?: unknown;
+    };
+    return {
+      stations: record.stations,
+      provider: record.provider === 'fm-world' ? 'fm-world' : 'radio-browser',
+      fallback: (record.fallback as RadioFallbackInfo | null) ?? null,
+    };
+  }
+
+  return null;
+}
+
 async function writeCache(
   key: string,
-  stations: RadioStation[],
+  value: unknown,
   ttlSeconds: number,
 ): Promise<void> {
   try {
-    await redis.set(key, JSON.stringify(stations), 'EX', ttlSeconds);
+    await redis.set(key, JSON.stringify(value), 'EX', ttlSeconds);
   } catch (error) {
     logger.warn('Cache write failed', { key, ...errorContext(error) });
   }
@@ -76,15 +148,15 @@ export async function searchRadios(
 ): Promise<RadioSearchResult> {
   const key = buildCacheKey(params);
 
-  const cached = await readCache(key);
+  const cached = await readCache(key, parseCachedSearch);
   if (cached) {
-    return { stations: cached, cache: 'HIT' };
+    return { ...cached, cache: 'HIT' };
   }
 
-  const stations = await fetchRadios(params);
-  await writeCache(key, stations, env.RADIO_CACHE_TTL_SECONDS);
+  const outcome = await fetchRadios(params);
+  await writeCache(key, outcome, env.RADIO_CACHE_TTL_SECONDS);
 
-  return { stations, cache: 'MISS' };
+  return { ...outcome, cache: 'MISS' };
 }
 
 /**
@@ -104,13 +176,13 @@ export async function getStationsByIds(
 ): Promise<RadioSearchResult> {
   const key = buildIdsCacheKey(ids);
 
-  const cached = await readCache(key);
+  const cached = await readCache(key, parseStationList);
   if (cached) {
-    return { stations: cached, cache: 'HIT' };
+    return { stations: cached, cache: 'HIT', ...BY_IDS_PROVENANCE };
   }
 
   const stations = await fetchStationsByIds(ids);
   await writeCache(key, stations, env.RADIO_CACHE_TTL_SECONDS);
 
-  return { stations, cache: 'MISS' };
+  return { stations, cache: 'MISS', ...BY_IDS_PROVENANCE };
 }

@@ -75,7 +75,7 @@ radiosRouter.get('/radios', async (req, res) => {
   const { q, limit, page, tag, countryCode, bitrateMin, order } = parsed.data;
 
   try {
-    const { stations, cache } = await searchRadios({
+    const { stations, cache, provider, fallback } = await searchRadios({
       q,
       limit,
       page,
@@ -86,6 +86,8 @@ radiosRouter.get('/radios', async (req, res) => {
     });
 
     res.setHeader('X-Cache', cache);
+    // Osservabile anche dagli header: chi ha risposto davvero alla ricerca (B1).
+    res.setHeader('X-Radio-Source', provider);
     res.json({
       data: stations,
       meta: {
@@ -93,7 +95,10 @@ radiosRouter.get('/radios', async (req, res) => {
         limit,
         page,
         count: stations.length,
-        source: 'radio-browser',
+        source: provider,
+        // Valorizzato quando la ricerca non è passata da FM-World: dice chi ha
+        // risposto al suo posto e perché, invece di nascondere il fallback.
+        fallback,
         filters: {
           tags: tag ?? null,
           countryCode: countryCode ?? null,

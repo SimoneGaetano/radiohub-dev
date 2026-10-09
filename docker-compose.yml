@@ -63,6 +63,9 @@ services:
       RADIO_API_KEY: ${RADIO_API_KEY:-}
       RADIO_API_TIMEOUT_MS: ${RADIO_API_TIMEOUT_MS:-5000}
       RADIO_CACHE_TTL_SECONDS: ${RADIO_CACHE_TTL_SECONDS:-600}
+      # B1: fonte primaria FM-World; il token resta lato server.
+      FM_WORLD_API_BASE_URL: ${FM_WORLD_API_BASE_URL:-https://connect.fm-world.com/client2}
+      FM_WORLD_API_TOKEN: ${FM_WORLD_API_TOKEN:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       SUMMARY_PROVIDER: ${SUMMARY_PROVIDER:-auto}

@@ -523,3 +523,20 @@ pm run build (exit 0)
 - [x] Test: `tests/docs.test.ts` **9/9 verdi**; `radiohub-backend` ricostruito e `healthy`; la pagina servita contiene il fix (`style="flex: 1 1 auto; min-height: 0; width: 100%"`)
 - [ ] **Limite noto che resta**: la pagina delle specifiche è comunque un documento lungo ~18.500 px renderizzato in uno shadow root da 843 KB di bundle: su macchine lente la rotellina resta poco fluida
 
+
+### Task 4.25 — B1: FM-World come fonte primaria della ricerca radio, con fallback dichiarato [x]
+
+> La traccia (B1) indica **FM-World** con token Bearer; il codice usava Radio Browser. Proxy, normalizzazione, cache e 502/504 c'erano già, mancava il client. Prima di scriverlo ho **misurato** l'endpoint con il token del documento: `403 Forbidden` (e `401` senza token) — quindi il token è riconosciuto ma non autorizzato. Da lì la scelta: FM-World primario, Radio Browser come fallback, e **fallback dichiarato nella risposta** invece che silenzioso.
+
+- [x] `services/radioSource.ts`: `searchViaFmWorld` (`GET <base>/radios?query=&limit=` + `Authorization: Bearer`, token da `FM_WORLD_API_TOKEN`, timeout e errori mappati sugli stessi errori tipizzati) più un **mapper tollerante** (`pickString`/`pickNumber`/`pickTags`, contenitore o array nudo): la forma della risposta non è osservabile, quindi non si finge di conoscerla
+- [x] `fetchRadios` ora restituisce `{ stations, provider, fallback }`: Radio Browser interviene per i filtri che FM-World non espone (`tag`/`countryCode`/`bitrateMin`/`order`/`page > 1`), per token mancante e quando FM-World fallisce; `fetchStationsByIds` resta su Radio Browser (non esiste un endpoint per id)
+- [x] `services/radioService.ts`: la **provenienza viene messa in cache** insieme alle stazioni (altrimenti una HIT non saprebbe più chi ha risposto), con lettura retro-compatibile delle voci scritte prima (solo array → Radio Browser) e `readCache<T>` che valida la forma attesa
+- [x] `routes/radios.ts`: `meta.source` è la fonte reale e `meta.fallback` dice chi ha risposto al posto di FM-World e perché; aggiunto l'header `X-Radio-Source`
+- [x] `config/env.ts` + `.env.example` + `docker-compose.yml`: `FM_WORLD_API_BASE_URL` e `FM_WORLD_API_TOKEN` (token **solo lato server**; senza token il primario non viene nemmeno tentato e l'app parte comunque)
+- [x] `docs/openapi.ts` allineato: `meta.source` con enum, `meta.fallback` documentato, esempi 502/504 riferiti a FM-World
+- [x] **Test**: nuovo `tests/radioSource.test.ts` (8 casi, `fetch` stubbata, zero rete) — FM-World ok, array nudo con nomi di campo alternativi, fallback su 403 / timeout / payload inatteso / token mancante / filtri, errore propagato se cadono entrambe le fonti → suite **11 file / 83 test verdi**
+- [x] **Verifica live** su `:8080` con il token della traccia in `.env` (file ignorato da git): `?query=jazz&limit=3` → `source: radio-browser`, `fallback: {from: fm-world, to: radio-browser, reason: "HTTP 403"}`, 3 stazioni, e alla seconda chiamata `X-Cache: HIT` con `X-Radio-Source: radio-browser` (la provenienza sopravvive alla cache); `?tag=jazz,blues` → `reason: "query needs filters FM-World does not expose"`
+- [x] Difetto mio trovato nei log: `errorContext(error)` contiene `message`, che nel logger (`{ message, ...context }`) **sovrascrive** il messaggio della riga → il warn del fallback perdeva il "falling back". Ora il contesto usa la chiave `error`
+- [x] Difetto trovato in verifica: `de1.api.radio-browser.info` ha risposto `503` (rate limit) → il client riceve `502` coerente; documentato nel README con l'alternativa `all.api.radio-browser.info` (una variabile d'ambiente)
+- [x] README: nuova sezione "Fonte radio (B1)" con strategia e misura; "Limiti noti" riscritti (token non valido, payload non osservabile, filtri, mirror singolo) e rimossa la voce **F3** ormai completata
+

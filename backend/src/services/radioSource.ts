@@ -1,6 +1,7 @@
 import { URL } from 'node:url';
 import { z } from 'zod';
 import { env } from '../config/env';
+import { logger } from '../utils/logger';
 
 /**
  * Normalised station shape exposed by the API (a small subset of the
@@ -55,6 +56,102 @@ export class UpstreamError extends Error {
     this.name = 'UpstreamError';
     this.status = status;
   }
+}
+
+/* -------------------------------------------------------------------------- *
+ * B1 — Fonti della ricerca radio
+ *
+ * La traccia indica **FM-World** come fonte della ricerca radio: il client più
+ * sotto parla con `<base>/radios` (`query` + `limit`) e tiene il token lato
+ * server. FM-World non copre due casi che Radio Browser invece copre — i filtri
+ * per tag/paese/bitrate usati dalle pill e la risoluzione "per id" di preferiti
+ * e cronologia — e quando non risponde si usa Radio Browser come fallback.
+ * L'esito dichiara **chi ha risposto** e perché è stato usato il fallback: un
+ * fallback silenzioso sarebbe indistinguibile da un provider che funziona.
+ * -------------------------------------------------------------------------- */
+
+/** Chi ha prodotto i risultati di una ricerca. */
+export type RadioProvider = 'fm-world' | 'radio-browser';
+
+/** Dettagli del fallback, esposti in `meta.fallback` per trasparenza. */
+export interface RadioFallbackInfo {
+  /** Provider che non ha risposto. */
+  from: RadioProvider;
+  /** Provider che ha risposto al suo posto. */
+  to: RadioProvider;
+  /** Motivo sintetico e stabile (es. `HTTP 403`, `timeout`). */
+  reason: string;
+}
+
+/** Esito di una ricerca: i dati più la loro provenienza. */
+export interface RadioSearchOutcome {
+  stations: RadioStation[];
+  provider: RadioProvider;
+  fallback: RadioFallbackInfo | null;
+}
+
+const FM_WORLD: RadioProvider = 'fm-world';
+const RADIO_BROWSER: RadioProvider = 'radio-browser';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Prima stringa non vuota fra i nomi di campo accettati. */
+function pickString(
+  item: Record<string, unknown>,
+  keys: readonly string[],
+): string {
+  for (const key of keys) {
+    const value = item[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+  return '';
+}
+
+/** Primo numero valido fra i nomi di campo accettati (0 se assente). */
+function pickNumber(
+  item: Record<string, unknown>,
+  keys: readonly string[],
+): number {
+  for (const key of keys) {
+    const value = item[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+  return 0;
+}
+
+/** I tag possono arrivare come array oppure come stringa separata da virgole. */
+function pickTags(item: Record<string, unknown>): string[] {
+  for (const key of ['tags', 'genres', 'genre', 'categories']) {
+    const value = item[key];
+    if (Array.isArray(value)) {
+      return value
+        .filter((tag): tag is string => typeof tag === 'string')
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
+    }
+  }
+  return [];
 }
 
 /**
@@ -121,10 +218,11 @@ function toStation(raw: UpstreamStation): RadioStation {
 }
 
 /**
- * Calls the external radio source, mapping network problems to typed errors:
- * `UpstreamTimeoutError` (→ 504) and `UpstreamError` (→ 502).
+ * Search on **Radio Browser**, walking the tag candidates in order. Network
+ * problems are mapped to typed errors: `UpstreamTimeoutError` (→ 504) and
+ * `UpstreamError` (→ 502).
  */
-export async function fetchRadios(
+async function fetchRadiosFromRadioBrowser(
   params: RadioSearchParams,
 ): Promise<RadioStation[]> {
   const candidates =
@@ -134,7 +232,7 @@ export async function fetchRadios(
 
   let stations: RadioStation[] = [];
   for (const tag of candidates) {
-    stations = await requestStations({ ...params, tag });
+    stations = await searchViaRadioBrowser({ ...params, tag });
     if (stations.length > 0) {
       break;
     }
@@ -142,8 +240,8 @@ export async function fetchRadios(
   return stations;
 }
 
-/** Performs one upstream search request (no fallback logic). */
-async function requestStations(params: {
+/** One Radio Browser request, without the tag fallback chain. */
+async function searchViaRadioBrowser(params: {
   q?: string;
   limit: number;
   page: number;
@@ -251,4 +349,194 @@ export async function fetchStationsByIds(
     }
   }
   return stations;
+}
+
+/* -------------------------------------------------------------------------- *
+ * FM-World — fonte primaria della ricerca radio (B1)
+ * -------------------------------------------------------------------------- */
+
+/** L'elenco può arrivare come array nudo o dentro un contenitore. */
+function extractItems(payload: unknown): Record<string, unknown>[] {
+  if (Array.isArray(payload)) {
+    return payload.filter(isRecord);
+  }
+  if (isRecord(payload)) {
+    for (const key of ['data', 'radios', 'items', 'results', 'stations']) {
+      const value = payload[key];
+      if (Array.isArray(value)) {
+        return value.filter(isRecord);
+      }
+    }
+  }
+  return [];
+}
+
+/**
+ * Converte un elemento di FM-World nella stazione normalizzata.
+ *
+ * La forma esatta della risposta **non è stata verificabile**: l'endpoint non ha
+ * documentazione pubblica e il token fornito con la traccia risponde
+ * `403 Forbidden` (la misura è nel README). Il mapper è perciò volutamente
+ * tollerante — prova i nomi di campo plausibili invece di imporre un unico
+ * schema — e scarta solo gli elementi a cui manca l'essenziale (id, nome o URL
+ * dello stream). Se nessun elemento è riconoscibile la ricerca non torna vuota:
+ * `searchViaFmWorld` la tratta come contratto inatteso e lascia decidere il
+ * fallback.
+ */
+function toFmWorldStation(item: Record<string, unknown>): RadioStation | null {
+  const id = pickString(item, ['id', 'radioId', 'radio_id', 'stationId', 'uuid']);
+  const name = pickString(item, ['name', 'title', 'radioName', 'label']);
+  const url = pickString(item, [
+    'streamUrl',
+    'stream_url',
+    'stream',
+    'urlStream',
+    'url',
+    'audioUrl',
+  ]);
+
+  if (!id || !name || !url) {
+    return null;
+  }
+
+  return {
+    id,
+    name,
+    url,
+    favicon: pickString(item, ['logo', 'logoUrl', 'image', 'imageUrl', 'favicon']),
+    country: pickString(item, ['country', 'countryName', 'nation']),
+    countryCode: pickString(item, ['countryCode', 'country_code', 'iso']).toUpperCase(),
+    language: pickString(item, ['language', 'lang']),
+    tags: pickTags(item),
+    votes: pickNumber(item, ['votes', 'likes', 'rating']),
+    codec: pickString(item, ['codec', 'format', 'audioCodec']),
+    bitrate: pickNumber(item, ['bitrate', 'bitRate', 'kbps']),
+  };
+}
+
+/** Una richiesta a FM-World (B1). Il fallback lo decide `fetchRadios`. */
+async function searchViaFmWorld(
+  params: RadioSearchParams,
+): Promise<RadioStation[]> {
+  const token = env.FM_WORLD_API_TOKEN;
+  if (!token) {
+    throw new UpstreamError('FM-World token is not configured', 401);
+  }
+
+  const base = env.FM_WORLD_API_BASE_URL.replace(/\/+$/, '');
+  const url = new URL(`${base}/radios`);
+  url.searchParams.set('limit', String(params.limit));
+  if (params.q) {
+    url.searchParams.set('query', params.q);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+        'User-Agent': 'RadioHub/0.1.0',
+      },
+      signal: AbortSignal.timeout(env.RADIO_API_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new UpstreamTimeoutError('FM-World timed out');
+    }
+    throw new UpstreamError('Unable to reach FM-World');
+  }
+
+  if (!response.ok) {
+    throw new UpstreamError(
+      `FM-World responded with status ${response.status}`,
+      response.status,
+    );
+  }
+
+  const payload: unknown = await response.json();
+  const items = extractItems(payload);
+  if (items.length === 0 && !Array.isArray(payload)) {
+    throw new UpstreamError('Unexpected payload from FM-World');
+  }
+
+  const stations: RadioStation[] = [];
+  for (const item of items) {
+    const station = toFmWorldStation(item);
+    if (station) {
+      stations.push(station);
+    }
+  }
+
+  if (items.length > 0 && stations.length === 0) {
+    throw new UpstreamError(
+      'FM-World payload did not contain any recognisable station',
+    );
+  }
+
+  return stations;
+}
+
+/**
+ * Ricerca radio (B1): la fonte dipende da ciò che la query richiede.
+ *
+ * 1. **FM-World**, la fonte indicata dalla traccia, quando la ricerca è
+ *    esprimibile con `query` + `limit` e il token è configurato;
+ * 2. **Radio Browser** quando serve un filtro che FM-World non espone (tag,
+ *    paese, bitrate, ordinamento — le pill di genere — oppure `page > 1`),
+ *    quando il token manca, o quando FM-World non risponde (401/403, timeout,
+ *    payload inatteso).
+ *
+ * Ogni uscita dal percorso primario è **dichiarata** in `fallback`, così la
+ * risposta HTTP può dire chi ha risposto e perché: un fallback silenzioso
+ * sarebbe indistinguibile da un provider che funziona.
+ */
+export async function fetchRadios(
+  params: RadioSearchParams,
+): Promise<RadioSearchOutcome> {
+  const requiresBrowserSource =
+    (params.tags?.length ?? 0) > 0 ||
+    params.countryCode !== undefined ||
+    params.bitrateMin !== undefined ||
+    params.order !== undefined ||
+    params.page > 1;
+
+  const viaBrowser = async (reason: string): Promise<RadioSearchOutcome> => ({
+    stations: await fetchRadiosFromRadioBrowser(params),
+    provider: RADIO_BROWSER,
+    fallback: { from: FM_WORLD, to: RADIO_BROWSER, reason },
+  });
+
+  if (requiresBrowserSource) {
+    return viaBrowser('query needs filters FM-World does not expose');
+  }
+
+  if (!env.FM_WORLD_API_TOKEN) {
+    return viaBrowser('FM-World token not configured');
+  }
+
+  try {
+    return {
+      stations: await searchViaFmWorld(params),
+      provider: FM_WORLD,
+      fallback: null,
+    };
+  } catch (error) {
+    const reason =
+      error instanceof UpstreamTimeoutError
+        ? 'timeout'
+        : error instanceof UpstreamError && error.status !== undefined
+          ? `HTTP ${error.status}`
+          : 'unreachable';
+
+    // `errorContext(error)` non va sparso qui: contiene `message`, che nel
+    // logger (`{ message, ...context }`) sovrascriverebbe il messaggio di questa
+    // riga, lasciando nei log l'errore senza il motivo per cui è stato scritto.
+    logger.warn('FM-World failed: falling back to Radio Browser', {
+      reason,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return viaBrowser(reason);
+  }
 }

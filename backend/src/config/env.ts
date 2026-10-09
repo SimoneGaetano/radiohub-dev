@@ -21,6 +21,13 @@ const envSchema = z.object({
   REDIS_URL: z.string().url(),
 
   // Radio source (upstream API)
+  /**
+   * Fonte alternativa (fallback) e catalogo usato per la risoluzione per id.
+   * La traccia (B1) indica FM-World come fonte della ricerca radio: Radio
+   * Browser resta configurato per due motivi dichiarati nel README — l'API di
+   * FM-World non espone i filtri per tag/paese/bitrate usati dalle pill, e non
+   * esiste un endpoint "per id" per ricostruire preferiti e cronologia.
+   */
   RADIO_API_BASE_URL: z
     .string()
     .url()
@@ -32,6 +39,27 @@ const envSchema = z.object({
     .transform((value) => (value && value.length > 0 ? value : undefined)),
   RADIO_API_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
   RADIO_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(600),
+
+  // FM-World (B1): fonte primaria della ricerca radio.
+  /**
+   * Base dell'API FM-World. Il percorso usato è `<base>/radios` con i parametri
+   * `query` e `limit`, come indicato dalla traccia.
+   */
+  FM_WORLD_API_BASE_URL: z
+    .string()
+    .url()
+    .default('https://connect.fm-world.com/client2'),
+  /**
+   * Bearer token di FM-World, **solo lato server**: non viene mai inoltrato al
+   * frontend né esposto in una risposta. Quando è assente il provider primario
+   * non viene nemmeno tentato (senza token la chiamata non può che fallire) e si
+   * passa direttamente al fallback, così l'app parte anche senza credenziali.
+   */
+  FM_WORLD_API_TOKEN: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value && value.length > 0 ? value : undefined)),
 
   // Auth (JWT)
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),

@@ -18,11 +18,14 @@ export const openApiDocument = {
     },
     description: [
       'Backend unico punto di accesso alle fonti esterne: ricerca radio',
-      '(Radio Browser), feed notizie (CloudFront), cache Redis, preferiti e',
-      'riassunti AI per utente.',
+      '(FM-World, con fallback automatico su Radio Browser quando non risponde),',
+      'feed notizie (CloudFront), cache Redis, preferiti e riassunti AI per utente.',
       '',
       'Errori comuni: `400` payload/query non valida, `401` token mancante o non',
       'valido, `502` fonte esterna non raggiungibile, `504` timeout della fonte.',
+      '',
+      '`GET /api/radios` dichiara in `meta.source` la fonte che ha risposto e in',
+      '`meta.fallback` chi ha preso il posto di FM-World e perché.',
     ].join('\n'),
   },
   servers: [
@@ -824,7 +827,27 @@ export const openApiDocument = {
               page: { type: 'integer' },
               count: { type: 'integer' },
               requested: { type: 'integer' },
-              source: { type: 'string', example: 'radio-browser' },
+              source: {
+                type: 'string',
+                enum: ['fm-world', 'radio-browser'],
+                description:
+                  'Fonte che ha risposto davvero (B1): `fm-world` è la fonte primaria indicata dalla traccia, `radio-browser` il fallback.',
+                example: 'radio-browser',
+              },
+              fallback: {
+                type: ['object', 'null'],
+                description:
+                  'Valorizzato quando la ricerca non è passata da FM-World: dice chi ha risposto al suo posto e perché.',
+                properties: {
+                  from: { type: 'string', enum: ['fm-world', 'radio-browser'] },
+                  to: { type: 'string', enum: ['fm-world', 'radio-browser'] },
+                  reason: {
+                    type: 'string',
+                    description: 'Motivo sintetico e stabile',
+                    example: 'HTTP 403',
+                  },
+                },
+              },
             },
           },
         },
@@ -977,7 +1000,7 @@ export const openApiDocument = {
             schema: { $ref: '#/components/schemas/ErrorResponse' },
             example: {
               error: 'Bad Gateway',
-              message: 'Radio Browser responded with HTTP 503',
+              message: 'FM-World responded with status 403',
             },
           },
         },
@@ -989,7 +1012,7 @@ export const openApiDocument = {
             schema: { $ref: '#/components/schemas/ErrorResponse' },
             example: {
               error: 'Gateway Timeout',
-              message: 'Radio Browser request timed out',
+              message: 'FM-World timed out',
             },
           },
         },

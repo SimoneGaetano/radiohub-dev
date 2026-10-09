@@ -143,11 +143,9 @@ jobs:
         working-directory: frontend
         run: npx tsc --noEmit
 
-      - name: Test
-        # Il frontend non ha ancora uno script `test`: --if-present salta il
-        # passo senza fallire e lo eseguirà da solo non appena lo aggiungi.
+      - name: Test (Vitest + React Testing Library)
         working-directory: frontend
-        run: npm test --if-present
+        run: npm test
 
       - name: Build di produzione
         working-directory: frontend

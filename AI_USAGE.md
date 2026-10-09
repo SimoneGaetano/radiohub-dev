@@ -68,6 +68,18 @@ potrebbe chiedersene il motivo.
   richieste dallo stesso IP: con le quote reali fallirebbe per `429` sui motivi
   sbagliati. Le soglie vere — `429` compreso — sono verificate da un test
   dedicato che costruisce il middleware con i propri valori e uno store iniettato.
+- **Un client unico per i modelli.** `modelClient.ts` (X3) esiste perché riassunti
+  e interpretazione della ricerca parlano con gli stessi due servizi: duplicare
+  timeout, retry e gestione degli errori significa doverli correggere due volte.
+  `SUMMARY_PROVIDER`/`SUMMARY_MODEL` restano l'unica configurazione dei modelli.
+- **L'output del modello è validato, non creduto.** La risposta dell'LLM passa da
+  uno schema Zod e, se non lo rispetta, si degrada a regole deterministiche
+  **dichiarando il motivo**: il client non riceve mai un `500` per colpa del
+  modello, e nei test il percorso a regole è verificato senza rete.
+- **Nella ricerca naturale il residuo non diventa subito una query.** "una radio
+  jazz italiana per rilassarmi" deve produrre `tags: jazz` + `IT`, non una query
+  di nome con "per rilassarmi": quest'ultima azzererebbe i risultati. Il testo
+  libero resta `q` solo quando non c'è nessun filtro forte.
 
 ## 4. Verifica automatizzata
 
@@ -102,6 +114,9 @@ del codice:
   e quote (X6)* nel README. Restano dichiarati i limiti: il JWT già emesso non si
   revoca al logout, la rotazione non traccia la "famiglia" dei gettoni e la
   finestra del contatore è fissa (non sliding).
+- **Ricerca in linguaggio naturale (bonus X3)**: chiusa — sezione *Ricerca in
+  linguaggio naturale (X3)* nel README. La duplicazione fra `aiService.ts` e
+  `modelClient.ts` è dichiarata e motivata lì.
 - **Provider IA reale**: integrato (Gemini/OpenAI) e selezionabile con
   `SUMMARY_PROVIDER`, ma il default resta il **mock** per far partire l'app
   anche senza chiavi API.

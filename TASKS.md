@@ -33,7 +33,7 @@ quelle del documento di consegna.
 | **D4** | Test unitari + integrazione backend, **RTL sul frontend** | `[x]` | backend **97 test in 13 file**; frontend **13 test** (`tests/SearchBar.test.tsx`, `tests/Player.test.tsx`) con `npm test` in CI |
 | **D5** | Log strutturati, `GET /api/health` con DB e Redis | `[x]` | `utils/logger.ts` (JSON in produzione), `routes/health.ts` |
 
-### Bonus — 3 completi, 0 parziali
+### Bonus — 4 completi, 0 parziali
 
 | # | Bonus | Stato | Dove sta la prova |
 | --- | --- | --- | --- |
@@ -41,7 +41,7 @@ quelle del documento di consegna.
 | **X7** | PWA installabile, tema chiaro/scuro, condivisione radio | `[x]` | `manifest.json`, `sw.js`, `utils/{theme,installPrompt}.ts`, copia link in `RadioCard` |
 | **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), rate limiting montato in `app.ts` (health e docs esclusi, `trust proxy`), refresh token monouso in `authService.ts` + `POST /api/auth/refresh`/`logout`, rinnovo trasparente in `frontend/src/services/api.ts`, 13 test |
 | X2 | Deploy su un cloud con URL pubblico | `[ ]` | — |
-| X3 | Ricerca in linguaggio naturale | `[ ]` | — |
+| **X3** | Ricerca in linguaggio naturale | `[x]` | `POST /api/radios/search`: `naturalSearchService.ts` (regole deterministiche: paesi + catene di tag delle pill) + `modelClient.ts` (modello, JSON validato con Zod, passaggio alle regole dichiarato in `fallbackReason`), quota `nl-search`, chip dei filtri in `SearchBar.tsx`; 19 test backend + 4 frontend |
 | X4 | Domande sulle notizie (RAG) con fonti | `[ ]` | — |
 | X5 | Aggiornamento in tempo reale (WebSocket o SSE) | `[ ]` | — |
 | X8 | E2E con Playwright (cerca → ascolta → preferiti) | `[ ]` | — |
@@ -58,7 +58,7 @@ o è **dichiarato non svolto con il motivo** — mai lasciato a metà.
 | — | **Consegna** — sezione *Requisiti svolti* nel `README.md` | 20 min | `[x]` |
 | 1 | **X6** — rate limiting e refresh token (2 dei 4 pezzi già fatti) | 3-4 h | `[x]` fatto |
 | 2 | **X5** — nuovi post in tempo reale (SSE) | 3 h | `[ ]` |
-| 3 | **X3** — ricerca in linguaggio naturale | 2-3 h | `[ ]` |
+| 3 | **X3** — ricerca in linguaggio naturale | 2-3 h | `[x]` fatto |
 | 4 | **X2** — deploy con URL pubblico | 3-6 h | `[ ]` |
 | 5 | **X4** — domande sulle notizie (RAG) con fonti | 4 h | `[ ]` |
 | 6 | **X8** — E2E Playwright (cerca → ascolta → preferiti) | 4 h | `[ ]` |

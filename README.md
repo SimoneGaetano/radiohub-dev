@@ -26,16 +26,19 @@ Il dettaglio per singolo requisito, con il file e i test che lo coprono, sta in
 | **X1** | Pipeline CI con lint, test e build | `[x]` | `.github/workflows/ci.yml`: `lint`, `format:check`, typecheck, test backend (97) e frontend (13), build — con Postgres e Redis reali come servizi |
 | **X7** | PWA installabile, tema chiaro/scuro, condivisione radio | `[x]` | `frontend/public/manifest.json`, `frontend/public/sw.js`, `frontend/src/utils/{theme,installPrompt}.ts`, copia del link in `RadioCard` |
 | **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), `POST /api/auth/refresh` e `/api/auth/logout` (`authService.ts`), rinnovo trasparente in `frontend/src/services/api.ts`; 13 test (`tests/rateLimit.test.ts`, `tests/refreshToken.test.ts`) |
+| **X3** | Ricerca in linguaggio naturale | `[x]` | `POST /api/radios/search` (`backend/src/services/naturalSearchService.ts` + `modelClient.ts`): modello con risposta JSON validata da Zod e fallback a regole deterministiche (paesi + catene di tag delle pill); quota dedicata `nl-search`; 19 test backend e 4 frontend; README § *Ricerca in linguaggio naturale (X3)* |
 
-**Perché questi tre.** X1 perché la CI è la prova che i test passano su una
+**Perché questi quattro.** X1 perché la CI è la prova che i test passano su una
 macchina diversa dalla mia, e non solo sulla mia; X7 perché rende l'app usabile
 da telefono come un'app vera — installazione, tema, condivisione — e tocca
 accessibilità e UX, non solo funzionalità; X6 perché è l'unico che cambia la
 **postura** dell'app, non le sue funzioni: quote per non farsi abusare e sessioni
-brevi ma rinnovabili, con il logout che finalmente ha un effetto sul server.
+brevi ma rinnovabili, con il logout che finalmente ha un effetto sul server; X3
+perché è l'unico che cambia il **modo** di cercare: dalla parola esatta
+all'intenzione, con l'interpretazione sempre visibile e correggibile.
 
-Gli altri bonus (X2 deploy, X3 linguaggio naturale, X4 RAG sulle notizie, X5 SSE,
-X8 E2E) sono valutati in [`TASKS.md`](./TASKS.md), con il motivo della scelta.
+Gli altri bonus (X2 deploy, X4 RAG sulle notizie, X5 SSE, X8 E2E) sono valutati in
+[`TASKS.md`](./TASKS.md), con il motivo della scelta.
 
 ## Struttura
 
@@ -661,6 +664,70 @@ gettone, opaco (32 byte casuali, non un JWT) e **monouso**, salvato in Redis
   temporaneo (`503`) **non** chiude la sessione: si chiude solo se il server
   rifiuta il gettone (`400`/`401`), e in quel caso lo store Redux viene avvisato
   con un callback registrato in `main.tsx`.
+
+## Ricerca in linguaggio naturale (X3)
+
+`POST /api/radios/search` prende una frase in italiano e restituisce i **filtri**
+che `GET /api/radios` sa già applicare — non le stazioni. Il client rifà la
+ricerca con quei filtri, quindi cache (B3), fonti (B1) e validazione restano una
+sola implementazione; e l'utente **vede cosa è stato capito** (i filtri compaiono
+come chip sotto la barra) e può correggerlo.
+
+```bash
+curl -X POST http://localhost:8080/api/radios/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"voglio una radio jazz italiana"}'
+```
+
+```json
+{
+  "data": {
+    "originalQuery": "voglio una radio jazz italiana",
+    "filters": { "tags": ["jazz"], "countryCode": "IT", "order": "votes" },
+    "source": "ai",
+    "provider": "gemini",
+    "matched": ["italiana", "jazz"],
+    "note": "Ricerca radio jazz italiane.",
+    "fallbackReason": null
+  }
+}
+```
+
+Due strade, nello spirito di A2:
+
+1. **modello** (`services/modelClient.ts`, condiviso con i riassunti): risposta
+   **JSON validata con Zod**. Fuori schema, senza chiave o con errore di rete non
+   si risponde con un errore, si passa alla strada 2;
+2. **regole deterministiche** (`services/naturalSearchService.ts`): dizionari di
+   **paesi** (nome in italiano → codice ISO) e **generi** — le stesse catene di
+   tag delle pill — più indizi su ordinamento e qualità. Funziona offline, quindi
+   la funzione non dipende da un servizio esterno per esistere.
+
+La risposta dichiara **quale** delle due ha risposto (`source`) e il motivo del
+passaggio alle regole (`fallbackReason`). Verificato dal vivo, stessa frase:
+
+| Configurazione | `source` | Filtri risultanti |
+| --- | --- | --- |
+| `SUMMARY_PROVIDER=auto` con chiave | `ai` (`gemini`) | `tags: [jazz]`, `IT`, `votes` |
+| `SUMMARY_PROVIDER=mock` | `rules` (`no-provider`) | `tags: [jazz, blues, soul, funk]`, `IT`, `votes` |
+
+Dettagli che contano:
+
+- **Difesa da prompt injection (A3)**: il testo dell'utente viaggia fra due
+  delimitatori, l'istruzione ordina di ignorare qualsiasi cosa contengano, e i
+  delimitatori **vengono rimossi** dal testo prima della chiamata.
+- **Il residuo non sporca la query**: "una radio jazz italiana per rilassarmi"
+  produce `tags: jazz` + `IT` e **non** una query di nome con "per rilassarmi",
+  che azzererebbe i risultati. Il testo libero diventa `q` solo se non sono stati
+  riconosciuti né tag né paese ("radio deejay" → `q: deejay`).
+- **Vocabolario coerente**: le catene di tag sono le stesse di `GenrePills.tsx`,
+  quindi "musica dance" e la pill Dance chiedono la stessa cosa.
+- **Quota dedicata** (`nl-search`, 20 ogni 5 minuti per utente o IP), separata da
+  quella dei riassunti: chiama il modello, e un bucket non deve bloccare l'altro.
+- **Nota dichiarata**: `aiService.ts` (bio delle radio, A1–A3) mantiene la propria
+  chiamata al provider invece di usare `modelClient`. È una duplicazione nota:
+  unificarla tocca un percorso chiuso e testato senza guadagno funzionale, e
+  `modelClient` è nato anche per assorbirla in un secondo momento.
 
 ## Limiti noti
 

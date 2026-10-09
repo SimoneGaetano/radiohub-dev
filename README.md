@@ -219,6 +219,8 @@ vengono proxied dal dev-server Vite verso il backend su `http://localhost:4000`
 | `npm run dev`       | Dev-server Vite con proxy `/api`       |
 | `npm run build`     | Type-check (`tsc --noEmit`) + build    |
 | `npm run typecheck` | Solo controllo dei tipi                |
+| `npm test`          | Test dei componenti (Vitest + Testing Library) |
+| `npm run test:watch` | Test in watch mode                    |
 | `npm run preview`   | Serve la build di produzione            |
 | `npm run lint`      | ESLint 10 (flat config) + regole React  |
 | `npm run lint:fix`  | ESLint con correzione automatica        |
@@ -264,6 +266,43 @@ cd frontend && npm run lint && npm run format:check
 
 Gli stessi due comandi girano in **CI** a ogni push e pull request, prima di
 typecheck, test e build.
+
+## Test (D4)
+
+```bash
+cd backend  && npm test    # 83 test: unitari + integrazione (Vitest + Supertest)
+cd frontend && npm test    # 13 test: componenti (Vitest + React Testing Library)
+```
+
+**Backend** — unitari su filtro, cache e riassunto, più integrazione sugli
+endpoint con `supertest`. I due test che interrogano davvero la fonte radio hanno
+un timeout esplicito più alto: l'upstream può rispondere lentamente al primo giro,
+quando la cache Redis è fredda.
+
+**Frontend** — ambiente `jsdom`, `@testing-library/react` per gli interrogatori e
+`user-event` per le interazioni. I due componenti richiesti da D4 sono coperti
+**per comportamento**, non per markup:
+
+- **ricerca** (`SearchBar`): al montaggio chiede la classifica di base
+  (`limit=50`, nessuna query); **dopo la pausa di digitazione** chiede invece il
+  testo cercato (`q=jazz`, `limit=20`); digitare riporta la pill su "Tutti";
+  svuotare il campo torna subito alla classifica, senza attendere la pausa. La
+  pausa di digitazione è parte del requisito, quindi i test usano i **timer
+  veri** con `waitFor` e non una loro imitazione;
+- **player** (`Player`): senza stazione non renderizza nulla; mostra nome e
+  controlli; il pulsante di play **avvia davvero il flusso** (viene verificata la
+  `play()` sull'elemento audio) e diventa "Pausa"; la **barra spaziatrice** mette
+  in pausa; il tasto di chiusura svuota lo stato e fa sparire la barra; il volume
+  aggiorna lo stato in scala 0-1; una sorgente **`.m3u8` passa da hls.js** mentre
+  una diretta finisce nell'elemento audio.
+
+Le due cose che jsdom non ha — la riproduzione dei media e
+`IntersectionObserver` — sono stubbate **una volta sola** in `tests/setup.ts`,
+non test per test. `hls.js` è simulato: in jsdom non può funzionare, e il test
+verifica che il Player lo **usi** per gli stream HLS.
+
+Lo `store` espone anche una factory (`createStore`): così ogni test parte da uno
+stato pulito invece di condividere il singleton dell'app.
 
 ## Fonte radio (B1)
 

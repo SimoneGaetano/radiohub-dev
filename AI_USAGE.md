@@ -85,8 +85,6 @@ del codice:
 
 ## 6. Lavoro ancora manuale
 
-- **Test frontend con React Testing Library (D4)**: assenti. Il passo in CI è
-  `npm test --if-present` e si attiverà da solo quando esisterà lo script.
 - **Rate limiting sulle API (bonus X6)**: `helmet` e CORS sono attivi, la
   limitazione delle richieste no.
 - **Provider IA reale**: integrato (Gemini/OpenAI) e selezionabile con

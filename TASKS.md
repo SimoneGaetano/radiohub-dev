@@ -10,7 +10,7 @@ quelle del documento di consegna.
 
 ## 1. Stato rispetto alla traccia 22HBG
 
-### Obbligatori — 17 fatti, 1 parziale
+### Obbligatori — 18 fatti, 0 parziali
 
 | # | Requisito | Stato | Dove sta la prova |
 | --- | --- | --- | --- |
@@ -30,7 +30,7 @@ quelle del documento di consegna.
 | **D1** | `docker compose up` unico, build multi-stage, migrate + seed | `[x]` | `docker-compose.yml`, i due `Dockerfile` |
 | **D2** | Tutto da variabili d'ambiente, `.env.example`, mai `.env` | `[x]` | `config/env.ts` (Zod, fail-fast); `.env` è in `.gitignore` |
 | **D3** | ESLint + Prettier, TypeScript strict, commit piccoli | `[x]` | config flat in `backend/eslint.config.mjs` e `frontend/eslint.config.mjs` + Prettier alla radice; `lint` e `format:check` in CI; storia in commit per area |
-| **D4** | Test unitari + integrazione backend, **RTL sul frontend** | `[~]` | Backend `[x]` — **83 test in 11 file**; **frontend 0 test** |
+| **D4** | Test unitari + integrazione backend, **RTL sul frontend** | `[x]` | backend **83 test in 11 file**; frontend **13 test** (`tests/SearchBar.test.tsx`, `tests/Player.test.tsx`) con `npm test` in CI |
 | **D5** | Log strutturati, `GET /api/health` con DB e Redis | `[x]` | `utils/logger.ts` (JSON in produzione), `routes/health.ts` |
 
 ### Bonus — 2 completi, 1 parziale
@@ -50,10 +50,9 @@ quelle del documento di consegna.
 
 | # | Cosa | Tipo | Sforzo |
 | --- | --- | --- | --- |
-| 1 | **D4** — test frontend con React Testing Library su `Player` e `SearchBar` | obbligatorio | 2-4 h |
-| 2 | **Consegna** — sezione *Requisiti svolti* nel `README.md` | consegna | 20 min |
-| 3 | **X5** — nuovi post in tempo reale (SSE) | bonus | medio |
-| 4 | **X6** — rate limiting e refresh token (2 dei 4 pezzi già fatti) | bonus | medio |
+| 1 | **Consegna** — sezione *Requisiti svolti* nel `README.md` | consegna | 20 min |
+| 2 | **X5** — nuovi post in tempo reale (SSE) | bonus | medio |
+| 3 | **X6** — rate limiting e refresh token (2 dei 4 pezzi già fatti) | bonus | medio |
 | — | X2 / X3 / X4 / X8 | bonus | alti |
 
 ### Task interne ancora aperte (non richieste dalla traccia)
@@ -122,6 +121,7 @@ Il dettaglio (diagnosi, misure, prima/dopo) sta in
 - [x] **4.24** La pagina `/api/docs` non rispondeva alla rotellina del mouse (B5)
 - [x] **4.25** B1: FM-World come fonte primaria della ricerca radio, con fallback dichiarato
 - [x] **4.26** Qualità del codice: ESLint 10 + Prettier su backend e frontend (D3)
+- [x] **4.27** Test dei componenti frontend con React Testing Library (D4)
 
 ### Milestone 5 — Docker unico, Test & Consegna
 

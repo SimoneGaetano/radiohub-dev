@@ -23,7 +23,7 @@ Il dettaglio per singolo requisito, con il file e i test che lo coprono, sta in
 
 | # | Bonus | Stato | Dove sta la prova |
 | --- | --- | --- | --- |
-| **X1** | Pipeline CI con lint, test e build | `[x]` | `.github/workflows/ci.yml`: `lint`, `format:check`, typecheck, test backend (83) e frontend (13), build — con Postgres e Redis reali come servizi |
+| **X1** | Pipeline CI con lint, test e build | `[x]` | `.github/workflows/ci.yml`: `lint`, `format:check`, typecheck, test backend (97) e frontend (13), build — con Postgres e Redis reali come servizi |
 | **X7** | PWA installabile, tema chiaro/scuro, condivisione radio | `[x]` | `frontend/public/manifest.json`, `frontend/public/sw.js`, `frontend/src/utils/{theme,installPrompt}.ts`, copia del link in `RadioCard` |
 | **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), `POST /api/auth/refresh` e `/api/auth/logout` (`authService.ts`), rinnovo trasparente in `frontend/src/services/api.ts`; 13 test (`tests/rateLimit.test.ts`, `tests/refreshToken.test.ts`) |
 
@@ -305,7 +305,7 @@ typecheck, test e build.
 ## Test (D4)
 
 ```bash
-cd backend  && npm test    # 83 test: unitari + integrazione (Vitest + Supertest)
+cd backend  && npm test    # 97 test: unitari + integrazione (Vitest + Supertest)
 cd frontend && npm test    # 13 test: componenti (Vitest + React Testing Library)
 ```
 

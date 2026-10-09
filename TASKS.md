@@ -30,14 +30,14 @@ quelle del documento di consegna.
 | **D1** | `docker compose up` unico, build multi-stage, migrate + seed | `[x]` | `docker-compose.yml`, i due `Dockerfile` |
 | **D2** | Tutto da variabili d'ambiente, `.env.example`, mai `.env` | `[x]` | `config/env.ts` (Zod, fail-fast); `.env` è in `.gitignore` |
 | **D3** | ESLint + Prettier, TypeScript strict, commit piccoli | `[x]` | config flat in `backend/eslint.config.mjs` e `frontend/eslint.config.mjs` + Prettier alla radice; `lint` e `format:check` in CI; storia in commit per area |
-| **D4** | Test unitari + integrazione backend, **RTL sul frontend** | `[x]` | backend **83 test in 11 file**; frontend **13 test** (`tests/SearchBar.test.tsx`, `tests/Player.test.tsx`) con `npm test` in CI |
+| **D4** | Test unitari + integrazione backend, **RTL sul frontend** | `[x]` | backend **97 test in 13 file**; frontend **13 test** (`tests/SearchBar.test.tsx`, `tests/Player.test.tsx`) con `npm test` in CI |
 | **D5** | Log strutturati, `GET /api/health` con DB e Redis | `[x]` | `utils/logger.ts` (JSON in produzione), `routes/health.ts` |
 
 ### Bonus — 3 completi, 0 parziali
 
 | # | Bonus | Stato | Dove sta la prova |
 | --- | --- | --- | --- |
-| **X1** | Pipeline CI con lint, test e build | `[x]` | `.github/workflows/ci.yml`: typecheck + 83 test + build, con Postgres e Redis reali |
+| **X1** | Pipeline CI con lint, test e build | `[x]` | `.github/workflows/ci.yml`: lint + format:check + typecheck + 97 test + build, con Postgres e Redis reali |
 | **X7** | PWA installabile, tema chiaro/scuro, condivisione radio | `[x]` | `manifest.json`, `sw.js`, `utils/{theme,installPrompt}.ts`, copia link in `RadioCard` |
 | **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), rate limiting montato in `app.ts` (health e docs esclusi, `trust proxy`), refresh token monouso in `authService.ts` + `POST /api/auth/refresh`/`logout`, rinnovo trasparente in `frontend/src/services/api.ts`, 13 test |
 | X2 | Deploy su un cloud con URL pubblico | `[ ]` | — |

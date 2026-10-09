@@ -392,6 +392,7 @@ export const openApiDocument = {
             },
           },
           '404': { $ref: '#/components/responses/NotFound' },
+          '429': { $ref: '#/components/responses/TooManyRequests' },
         },
       },
       post: {
@@ -422,6 +423,7 @@ export const openApiDocument = {
             },
           },
           '404': { $ref: '#/components/responses/NotFound' },
+          '429': { $ref: '#/components/responses/TooManyRequests' },
         },
       },
     },
@@ -461,6 +463,7 @@ export const openApiDocument = {
               },
             },
           },
+          '429': { $ref: '#/components/responses/TooManyRequests' },
         },
       },
     },
@@ -495,6 +498,75 @@ export const openApiDocument = {
               },
             },
           },
+          '429': { $ref: '#/components/responses/TooManyRequests' },
+        },
+      },
+    },
+    '/api/auth/refresh': {
+      post: {
+        tags: ['Auth'],
+        operationId: 'refreshSession',
+        summary: 'Rinnova la sessione senza rimandare le credenziali (X6)',
+        description:
+          'Il refresh token è **monouso**: viene consumato e sostituito (rotazione), così un gettone intercettato vale una volta sola e non per la sua intera durata. La risposta ha la stessa forma del login.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RefreshTokenRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Nuova coppia di gettoni e dati dell’utente',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/LoginResponse' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': {
+            description: 'Refresh token sconosciuto, scaduto o già usato',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: { error: 'Invalid or expired refresh token' },
+              },
+            },
+          },
+          '429': { $ref: '#/components/responses/TooManyRequests' },
+          '503': {
+            description:
+              'Store delle sessioni (Redis) non disponibile: è un guasto temporaneo, la sessione non va cancellata',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: { error: 'Session store unavailable' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        operationId: 'logoutSession',
+        summary: 'Revoca il refresh token (X6)',
+        description:
+          'Il gettone non è più rinnovabile. Risponde `204` anche con gettone sconosciuto o assente: idempotente, e non rivela quali gettoni esistano. Il JWT già emesso resta valido fino alla sua scadenza (limite dichiarato nel README).',
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RefreshTokenRequest' },
+            },
+          },
+        },
+        responses: {
+          '204': { description: 'Sessione revocata (nessun contenuto)' },
         },
       },
     },
@@ -918,7 +990,19 @@ export const openApiDocument = {
         type: 'object',
         properties: {
           token: { type: 'string', description: 'JWT da usare come Bearer' },
+          refreshToken: {
+            type: ['string', 'null'],
+            description:
+              'Gettone di rinnovo **monouso**, opaco (non un JWT). `null` quando lo store delle sessioni non risponde: la sessione breve resta valida, si perde il rinnovo automatico. Va usato solo su `POST /api/auth/refresh`.',
+          },
           user: { $ref: '#/components/schemas/User' },
+        },
+      },
+      RefreshTokenRequest: {
+        type: 'object',
+        required: ['refreshToken'],
+        properties: {
+          refreshToken: { type: 'string', minLength: 1, maxLength: 512 },
         },
       },
       Favorite: {
@@ -983,6 +1067,37 @@ export const openApiDocument = {
           'application/json': {
             schema: { $ref: '#/components/schemas/ErrorResponse' },
             example: { error: 'Missing or malformed Authorization header' },
+          },
+        },
+      },
+      TooManyRequests: {
+        description:
+          'Quota di richieste esaurita (X6). Vale per tutte le rotte `/api` — 300 richieste al minuto per IP — con quote più strette su `login`/`register` (10 ogni 15 minuti) e sulle generazioni di riassunto AI (20 ogni 5 minuti, per utente). Gli health check (`/api/health*`) e la documentazione (`/api/docs`) sono esclusi dalla quota. La finestra riparte dopo i secondi indicati in `Retry-After`.',
+        headers: {
+          'Retry-After': {
+            description: 'Secondi da attendere prima di ritentare',
+            schema: { type: 'integer', example: 42 },
+          },
+          'RateLimit-Limit': {
+            description: 'Quota della finestra corrente',
+            schema: { type: 'integer', example: 300 },
+          },
+          'RateLimit-Remaining': {
+            description: 'Richieste ancora disponibili',
+            schema: { type: 'integer', example: 0 },
+          },
+          'RateLimit-Reset': {
+            description: 'Secondi alla riapertura della finestra',
+            schema: { type: 'integer', example: 42 },
+          },
+        },
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ErrorResponse' },
+            example: {
+              error: 'Too many requests',
+              details: { retryAfterSeconds: 42 },
+            },
           },
         },
       },

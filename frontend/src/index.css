@@ -1,5 +1,31 @@
 @import "tailwindcss";
 
+/*
+ * Token aggiuntivi del tema (bonus X7). In Tailwind 4 `@theme` definisce
+ * variabili CSS e genera le utility corrispondenti: `text-on-accent` esiste
+ * perché qui sotto c'è `--color-on-accent`.
+ */
+@theme {
+  /*
+   * Token degli accenti. DEVONO stare qui e non solo in `.palette-*`: in
+   * Tailwind 4 una utility esiste solo se la variabile è dichiarata in `@theme`
+   * (che ne emette anche il valore di default in `:root`). Senza queste righe
+   * `bg-accent` / `bg-accent-soft` / `text-accent-text` / `border-accent-border`
+   * non venivano generate, quindi la pillola di genere attiva, il cerchio del
+   * profilo e i pulsanti accent restavano **senza sfondo** (invisibili in
+   * entrambi i temi: `text-on-accent` è verde scurissimo sullo scuro e bianco
+   * sul chiaro). I valori per tema sono ridefiniti più in basso in
+   * `.palette-dark`/`.palette-light`, che (non essendo in un layer) vincono
+   * comunque su `:root`. Il default qui sotto = tema scuro.
+   */
+  --color-accent: #10b981;
+  --color-accent-soft: #34d399;
+  --color-accent-text: #34d399;
+  --color-accent-border: #10b981;
+  /* Testo sui pulsanti colorati: viene ridefinito per tema più in basso. */
+  --color-on-accent: #06281e;
+}
+
 :root {
   color-scheme: dark;
 }
@@ -9,6 +35,106 @@ body,
 #root {
   min-height: 100%;
 }
+
+/* --- Palette dei due temi --------------------------------------------- */
+/*
+ * Le utility di Tailwind (`bg-slate-900`, `text-slate-400`, …) vengono emesse
+ * come `var(--color-*)`: ridefinire le variabili ri-veste **tutta** l'app senza
+ * toccare i componenti. Il tema scuro è quello di partenza.
+ *
+ * `.palette-dark` è riutilizzabile: il full player la riapplica su di sé, così
+ * resta scuro in entrambi i temi (è una schermata immersiva guidata
+ * dall'artwork, con testo bianco: schiarirla romperebbe il contrasto).
+ *
+ * I rapporti di contrasto scelti stanno nel README (§ Temi); i valori non sono
+ * "a occhio": la scala `slate` viene invertita in modo che
+ * `text-slate-100` (testo principale) resti ≥ 15:1 sul fondo pagina.
+ */
+.palette-dark {
+  color-scheme: dark;
+  --focus-ring: #34d399;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  /* Accenti: superfici, hover, testo e bordi. */
+  --color-accent: #10b981;
+  --color-accent-soft: #34d399;
+  --color-accent-text: #34d399;
+  --color-accent-border: #10b981;
+  --color-on-accent: #06281e;
+
+  /* Tinte di stato (badge/avvisi) e testo su di esse. */
+  --color-emerald-100: #d1fae5;
+  --color-emerald-900: #064e3b;
+  --color-emerald-950: #022c22;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-rose-200: #fecdd3;
+  --color-rose-300: #fda4af;
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+  --color-red-950: #450a0a;
+}
+
+.palette-light {
+  color-scheme: light;
+  /* Anello di focus più scuro: il verde chiaro non si vedrebbe su fondo bianco. */
+  --focus-ring: #047857;
+
+  /* Scala invertita: 950 è il fondo pagina, 50 il testo principale. */
+  --color-slate-50: #020617;
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-600: #94a3b8;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #f1f5f9;
+
+  /*
+   * Su fondo chiaro l'accento deve essere **scuro**: verde 700 per le superfici
+   * (testo bianco: 5,5:1) e verde 700 per il testo/icone (5,5:1 su bianco).
+   * L'hover scurisce invece di schiarire, come ci si aspetta in tema chiaro.
+   */
+  --color-accent: #047857;
+  --color-accent-soft: #065f46;
+  --color-accent-text: #047857;
+  --color-accent-border: #047857;
+  --color-on-accent: #ffffff;
+
+  --color-emerald-100: #064e3b;
+  --color-emerald-900: #a7f3d0;
+  --color-emerald-950: #d1fae5;
+  --color-amber-300: #b45309;
+  --color-amber-400: #92400e;
+  --color-rose-200: #9f1239;
+  --color-rose-300: #be123c;
+  --color-red-100: #7f1d1d;
+  --color-red-200: #991b1b;
+  --color-red-300: #b91c1c;
+  --color-red-400: #b91c1c;
+  --color-red-800: #fca5a5;
+  --color-red-900: #fecaca;
+  --color-red-950: #fef2f2;
+}
+
 
 /* --- Full-screen player overlay --------------------------------------- */
 @keyframes player-overlay-in {
@@ -77,6 +203,29 @@ body,
 
 .toast-in {
   animation: toast-in 200ms ease-out both;
+}
+
+/* Horizontally scrollable rows (genre pills): no visible scrollbar. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* --- Accessibilità: focus sempre visibile ---------------------------- */
+/*
+ * Il ring nativo varia da browser a browser e alcuni controlli usano
+ * `outline-none`: una sola regola copre pulsanti, input, link e le card
+ * attivabili, così la navigazione da tastiera è sempre leggibile (WCAG 2.4.7).
+ * Il colore segue il tema (`--focus-ring`): verde chiaro sullo scuro, verde
+ * scuro sul chiaro, per restare visibile in entrambi.
+ */
+:focus-visible {
+  outline: 2px solid var(--focus-ring, #34d399);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -29,3 +29,6 @@ Progetto test 22HBG*.pdf
 diag.png
 frontend/shot-*.png
 frontend/tmp-*.mjs
+
+# Worktree di altri strumenti: copie di lavoro, mai parte del repository
+.kilo/

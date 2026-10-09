@@ -221,6 +221,42 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/radios/search': {
+      post: {
+        tags: ['Radios'],
+        operationId: 'interpretRadioQuery',
+        summary: 'Interpreta una frase in linguaggio naturale (X3)',
+        description:
+          'Traduce una frase in italiano nei filtri che `GET /api/radios` sa applicare (`q`, `tag`, `countryCode`, `bitrateMin`, `order`). Non restituisce stazioni: il client rifà la ricerca con quei filtri, quindi usa la stessa cache (B3) e le stesse fonti (B1), e l’utente vede cosa è stato capito e può correggerlo. Interpreta con il modello quando è configurato e altrimenti — o se la risposta non rispetta lo schema — con regole deterministiche, dichiarando quale delle due ha risposto (`source`) e il motivo (`fallbackReason`).',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/NaturalSearchRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Filtri interpretati',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    data: {
+                      $ref: '#/components/schemas/NaturalSearchInterpretation',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '429': { $ref: '#/components/responses/TooManyRequests' },
+        },
+      },
+    },
     '/api/radios/by-ids': {
       get: {
         tags: ['Radios'],
@@ -1033,6 +1069,72 @@ export const openApiDocument = {
           created: { type: 'integer', description: 'Post inseriti' },
           updated: { type: 'integer', description: 'Post aggiornati' },
           skipped: { type: 'integer', description: 'Elementi scartati' },
+        },
+      },
+      NaturalSearchRequest: {
+        type: 'object',
+        required: ['query'],
+        properties: {
+          query: {
+            type: 'string',
+            minLength: 2,
+            maxLength: 200,
+            example: 'voglio una radio jazz italiana',
+          },
+        },
+      },
+      NaturalSearchFilters: {
+        type: 'object',
+        description:
+          'Gli stessi filtri di `GET /api/radios`: vanno passati così come sono.',
+        properties: {
+          q: {
+            type: 'string',
+            description: 'Nome di stazione o parola libera',
+          },
+          tags: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Catena di tag provati in ordine dall’upstream, come le pill di genere',
+          },
+          countryCode: { type: 'string', example: 'IT' },
+          bitrateMin: { type: 'integer', example: 128 },
+          order: {
+            type: 'string',
+            enum: ['votes', 'name', 'clickcount', 'bitrate'],
+          },
+        },
+      },
+      NaturalSearchInterpretation: {
+        type: 'object',
+        properties: {
+          originalQuery: { type: 'string', example: 'radio jazz italiana' },
+          filters: { $ref: '#/components/schemas/NaturalSearchFilters' },
+          source: {
+            type: 'string',
+            enum: ['ai', 'rules'],
+            description: 'Chi ha interpretato la frase',
+          },
+          provider: {
+            type: ['string', 'null'],
+            description:
+              'Provider del modello; `null` quando ha risposto con le regole',
+          },
+          matched: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Parole riconosciute nei dizionari',
+          },
+          note: {
+            type: ['string', 'null'],
+            description: 'Spiegazione breve del modello, quando c’è',
+          },
+          fallbackReason: {
+            type: ['string', 'null'],
+            description:
+              'Perché si è passati alle regole (`no-provider`, `invalid json`, `nothing recognised`, `provider error`)',
+          },
         },
       },
       ErrorResponse: {

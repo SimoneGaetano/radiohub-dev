@@ -40,6 +40,7 @@ const DOCUMENTED_OPERATIONS: ReadonlyArray<[string, string]> = [
   ['/api/health', 'get'],
   ['/api/health/ready', 'get'],
   ['/api/radios', 'get'],
+  ['/api/radios/search', 'post'],
   ['/api/radios/by-ids', 'get'],
   ['/api/media', 'get'],
   ['/api/posts', 'get'],

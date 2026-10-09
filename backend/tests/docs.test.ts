@@ -131,7 +131,9 @@ describe('GET /api/openapi.json (B5)', () => {
       for (const [method, raw] of Object.entries(item)) {
         const operation = raw as OperationShape;
         if (!operation.operationId) {
-          problems.push(`${method.toUpperCase()} ${path}: operationId mancante`);
+          problems.push(
+            `${method.toUpperCase()} ${path}: operationId mancante`,
+          );
           continue;
         }
         if (seen.has(operation.operationId)) {
@@ -174,10 +176,11 @@ describe('GET /api/docs (B5)', () => {
     ]);
 
     const defined = [
-      ...bundle.text.matchAll(/customElements\.define\(\s*["'`]([a-z0-9-]+)["'`]/gi),
+      ...bundle.text.matchAll(
+        /customElements\.define\(\s*["'`]([a-z0-9-]+)["'`]/gi,
+      ),
     ].map((match) => match[1] ?? '');
-    const tag =
-      page.text.match(/<([a-z0-9-]+)[\s>][^>]*spec-url=/i)?.[1] ?? '';
+    const tag = page.text.match(/<([a-z0-9-]+)[\s>][^>]*spec-url=/i)?.[1] ?? '';
 
     expect(defined.length).toBeGreaterThan(5);
     expect(tag).not.toBe('');

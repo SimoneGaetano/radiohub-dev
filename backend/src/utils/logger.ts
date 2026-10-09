@@ -1,5 +1,11 @@
 import { env } from '../config/env';
 
+/*
+ * Unico file autorizzato a scrivere sulla console: `no-console` è disattivato
+ * per questo percorso in `eslint.config.mjs`, quindi non servono più i commenti
+ * di disattivazione puntuali.
+ */
+
 export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
 
 /** Numeric weight of each level, used to filter by `LOG_LEVEL`. */
@@ -56,16 +62,13 @@ function write(level: LogLevel, message: string, context?: LogContext): void {
         }`;
 
   if (level === 'fatal' || level === 'error') {
-    // eslint-disable-next-line no-console
     console.error(line);
     return;
   }
   if (level === 'warn') {
-    // eslint-disable-next-line no-console
     console.warn(line);
     return;
   }
-  // eslint-disable-next-line no-console
   console.log(line);
 }
 

@@ -398,7 +398,10 @@ describe('Riassunti per utente (E, ibrido)', () => {
     expect(providerA.calls).toBe(1);
 
     // Stesso utente, secondo giro: riga sua, nessuna nuova chiamata.
-    const secondA = await new SummaryService(providerA).summarize(postId, userA);
+    const secondA = await new SummaryService(providerA).summarize(
+      postId,
+      userA,
+    );
     expect(secondA?.generated).toBe(false);
     expect(secondA?.summary).toBe(firstA?.summary);
     expect(providerA.calls).toBe(1);

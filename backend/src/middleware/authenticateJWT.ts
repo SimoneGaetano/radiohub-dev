@@ -19,7 +19,9 @@ export function authenticateJWT(
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith(BEARER_PREFIX)) {
-    res.status(401).json({ error: 'Missing or malformed Authorization header' });
+    res
+      .status(401)
+      .json({ error: 'Missing or malformed Authorization header' });
     return;
   }
 

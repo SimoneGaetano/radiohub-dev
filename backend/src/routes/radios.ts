@@ -25,39 +25,41 @@ const searchTermSchema = z
   .optional()
   .transform((value) => (value && value.length > 0 ? value : undefined));
 
-const radiosQuerySchema = z.object({
-  /** Term as named in the brief (B1): `GET /api/radios?query=<testo>`. */
-  query: searchTermSchema,
-  /** Same value as sent by the frontend; it wins when both are present. */
-  q: searchTermSchema,
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-  page: z.coerce.number().int().min(1).default(1),
-  tag: z
-    .string()
-    .trim()
-    .max(300)
-    .optional()
-    .transform((value) =>
-      value && value.length > 0
-        ? value
-            .split(',')
-            .map((tag) => tag.trim().toLowerCase().slice(0, 32))
-            .filter((tag) => tag.length > 0)
-            .slice(0, 5)
-        : undefined,
-    )
-    .refine((tags) => tags === undefined || tags.length > 0, {
-      message: 'Provide at least one non-empty tag',
-    }),
-  countryCode: z
-    .string()
-    .trim()
-    .length(2)
-    .optional()
-    .transform((value) => value?.toUpperCase()),
-  bitrateMin: z.coerce.number().int().min(1).max(10000).optional(),
-  order: z.enum(['votes', 'name', 'clickcount', 'bitrate']).optional(),
-}).transform(({ query, ...rest }) => ({ ...rest, q: rest.q ?? query }));
+const radiosQuerySchema = z
+  .object({
+    /** Term as named in the brief (B1): `GET /api/radios?query=<testo>`. */
+    query: searchTermSchema,
+    /** Same value as sent by the frontend; it wins when both are present. */
+    q: searchTermSchema,
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+    page: z.coerce.number().int().min(1).default(1),
+    tag: z
+      .string()
+      .trim()
+      .max(300)
+      .optional()
+      .transform((value) =>
+        value && value.length > 0
+          ? value
+              .split(',')
+              .map((tag) => tag.trim().toLowerCase().slice(0, 32))
+              .filter((tag) => tag.length > 0)
+              .slice(0, 5)
+          : undefined,
+      )
+      .refine((tags) => tags === undefined || tags.length > 0, {
+        message: 'Provide at least one non-empty tag',
+      }),
+    countryCode: z
+      .string()
+      .trim()
+      .length(2)
+      .optional()
+      .transform((value) => value?.toUpperCase()),
+    bitrateMin: z.coerce.number().int().min(1).max(10000).optional(),
+    order: z.enum(['votes', 'name', 'clickcount', 'bitrate']).optional(),
+  })
+  .transform(({ query, ...rest }) => ({ ...rest, q: rest.q ?? query }));
 
 export const radiosRouter = Router();
 
@@ -109,7 +111,9 @@ radiosRouter.get('/radios', async (req, res) => {
     });
   } catch (error) {
     if (error instanceof UpstreamTimeoutError) {
-      res.status(504).json({ error: 'Gateway Timeout', message: error.message });
+      res
+        .status(504)
+        .json({ error: 'Gateway Timeout', message: error.message });
       return;
     }
 
@@ -118,7 +122,10 @@ radiosRouter.get('/radios', async (req, res) => {
       return;
     }
 
-    logger.error('Unexpected error while searching radios', errorContext(error));
+    logger.error(
+      'Unexpected error while searching radios',
+      errorContext(error),
+    );
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -170,7 +177,9 @@ radiosRouter.get('/radios/by-ids', async (req, res) => {
     });
   } catch (error) {
     if (error instanceof UpstreamTimeoutError) {
-      res.status(504).json({ error: 'Gateway Timeout', message: error.message });
+      res
+        .status(504)
+        .json({ error: 'Gateway Timeout', message: error.message });
       return;
     }
 
@@ -179,7 +188,10 @@ radiosRouter.get('/radios/by-ids', async (req, res) => {
       return;
     }
 
-    logger.error('Unexpected error while resolving radios by id', errorContext(error));
+    logger.error(
+      'Unexpected error while resolving radios by id',
+      errorContext(error),
+    );
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -217,12 +229,16 @@ radiosRouter.post('/ai/radio-info', async (req, res) => {
 
   try {
     const bio =
-      (await aiService.generateRadioInfo(radioId, radioName, { country, tags })) ??
-      buildFallbackBio(radioName, country);
+      (await aiService.generateRadioInfo(radioId, radioName, {
+        country,
+        tags,
+      })) ?? buildFallbackBio(radioName, country);
     res.json({ data: { radioId, radioName, bio } });
   } catch (error) {
     logger.error('AI radio-info generation failed', errorContext(error));
     // Fallback on any unexpected error: dynamic sentence from name + country.
-    res.json({ data: { radioId, radioName, bio: buildFallbackBio(radioName, country) } });
+    res.json({
+      data: { radioId, radioName, bio: buildFallbackBio(radioName, country) },
+    });
   }
 });

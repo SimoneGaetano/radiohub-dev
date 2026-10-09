@@ -176,9 +176,7 @@ describe('mapFeedItem (ingestion del feed notizie)', () => {
     );
 
     expect(item?.title).toBe('Radio & TV: l’Italia che cambia');
-    expect(item?.content).toBe(
-      'Prima riga\n\nSeconda "riga"\n\nTerza riga',
-    );
+    expect(item?.content).toBe('Prima riga\n\nSeconda "riga"\n\nTerza riga');
   });
 
   it('usa la data locale come fallback quando manca date_gmt', () => {

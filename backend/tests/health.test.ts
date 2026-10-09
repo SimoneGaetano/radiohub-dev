@@ -46,11 +46,15 @@ describe('GET /api/radios (validazione query)', () => {
     expect(response.body.error).toBe('Invalid query parameters');
   });
 
-  it('accetta limit=50 senza errori di validazione', async () => {
-    const response = await request(app).get('/api/radios?limit=50');
+  it(
+    'accetta limit=50 senza errori di validazione',
+    async () => {
+      const response = await request(app).get('/api/radios?limit=50');
 
-    expect(response.status).not.toBe(400);
-  }, LIVE_SOURCE_TIMEOUT_MS);
+      expect(response.status).not.toBe(400);
+    },
+    LIVE_SOURCE_TIMEOUT_MS,
+  );
 });
 
 describe('GET /api/favorites (autenticazione)', () => {

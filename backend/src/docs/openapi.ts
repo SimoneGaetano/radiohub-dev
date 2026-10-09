@@ -29,7 +29,10 @@ export const openApiDocument = {
     ].join('\n'),
   },
   servers: [
-    { url: 'http://localhost:4000', description: 'Backend in locale (sviluppo)' },
+    {
+      url: 'http://localhost:4000',
+      description: 'Backend in locale (sviluppo)',
+    },
     {
       url: 'http://localhost:8080',
       description: 'Stack completo attraverso il reverse proxy di nginx',
@@ -47,7 +50,10 @@ export const openApiDocument = {
     { name: 'Posts', description: 'Notizie sincronizzate dal feed esterno' },
     { name: 'Summaries', description: 'Riassunti AI dei post' },
     { name: 'Auth', description: 'Registrazione e login (JWT)' },
-    { name: 'Favorites', description: 'Radio preferite dell’utente autenticato' },
+    {
+      name: 'Favorites',
+      description: 'Radio preferite dell’utente autenticato',
+    },
     { name: 'Recents', description: 'Cronologia di ascolto dell’utente' },
     { name: 'Media', description: 'Proxy immagini same-origin' },
     { name: 'Admin', description: 'Sincronizzazione manuale del feed' },
@@ -424,7 +430,8 @@ export const openApiDocument = {
         tags: ['Auth'],
         operationId: 'registerUser',
         summary: 'Registrazione con email e password (B4)',
-        description: 'La password è cifrata con bcrypt prima di essere salvata.',
+        description:
+          'La password è cifrata con bcrypt prima di essere salvata.',
         requestBody: {
           required: true,
           content: {
@@ -547,7 +554,9 @@ export const openApiDocument = {
               'application/json': {
                 schema: {
                   type: 'object',
-                  properties: { data: { $ref: '#/components/schemas/Favorite' } },
+                  properties: {
+                    data: { $ref: '#/components/schemas/Favorite' },
+                  },
                 },
               },
             },
@@ -672,7 +681,9 @@ export const openApiDocument = {
               'application/json': {
                 schema: {
                   type: 'object',
-                  properties: { data: { $ref: '#/components/schemas/SyncResult' } },
+                  properties: {
+                    data: { $ref: '#/components/schemas/SyncResult' },
+                  },
                 },
               },
             },
@@ -789,9 +800,13 @@ export const openApiDocument = {
       },
       Radio: {
         type: 'object',
-        description: 'Stazione normalizzata (sottoinsieme del payload di fonte)',
+        description:
+          'Stazione normalizzata (sottoinsieme del payload di fonte)',
         properties: {
-          id: { type: 'string', example: 'd3f1c2a4-0000-0000-0000-000000000000' },
+          id: {
+            type: 'string',
+            example: 'd3f1c2a4-0000-0000-0000-000000000000',
+          },
           name: { type: 'string', example: 'Radio Bruno' },
           url: {
             type: 'string',
@@ -877,7 +892,8 @@ export const openApiDocument = {
           summary: { type: 'string' },
           generated: {
             type: 'boolean',
-            description: '`true` quando il testo è stato appena prodotto dal modello',
+            description:
+              '`true` quando il testo è stato appena prodotto dal modello',
           },
           provider: { type: 'string', example: 'gemini' },
         },
@@ -926,7 +942,10 @@ export const openApiDocument = {
       SyncResult: {
         type: 'object',
         properties: {
-          fetched: { type: 'integer', description: 'Elementi ricevuti dal feed' },
+          fetched: {
+            type: 'integer',
+            description: 'Elementi ricevuti dal feed',
+          },
           created: { type: 'integer', description: 'Post inseriti' },
           updated: { type: 'integer', description: 'Post aggiornati' },
           skipped: { type: 'integer', description: 'Elementi scartati' },

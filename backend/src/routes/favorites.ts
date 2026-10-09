@@ -20,7 +20,10 @@ favoritesRouter.get('/favorites', authenticateJWT, async (req, res) => {
     });
     res.json({ data: favorites });
   } catch (error) {
-    logger.error('Unexpected error while listing favorites', errorContext(error));
+    logger.error(
+      'Unexpected error while listing favorites',
+      errorContext(error),
+    );
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -53,27 +56,34 @@ favoritesRouter.post('/favorites', authenticateJWT, async (req, res) => {
 });
 
 /** Removes a station from the authenticated user's favourites. */
-favoritesRouter.delete('/favorites/:radioId', authenticateJWT, async (req, res) => {
-  const { radioId } = req.params;
-  if (!radioId) {
-    res.status(400).json({ error: 'radioId is required' });
-    return;
-  }
-
-  try {
-    const user = requireUser(req);
-    const result = await prisma.favorite.deleteMany({
-      where: { userId: user.id, radioId },
-    });
-
-    if (result.count === 0) {
-      res.status(404).json({ error: 'Favorite not found' });
+favoritesRouter.delete(
+  '/favorites/:radioId',
+  authenticateJWT,
+  async (req, res) => {
+    const { radioId } = req.params;
+    if (!radioId) {
+      res.status(400).json({ error: 'radioId is required' });
       return;
     }
 
-    res.status(204).send();
-  } catch (error) {
-    logger.error('Unexpected error while deleting favorite', errorContext(error));
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+    try {
+      const user = requireUser(req);
+      const result = await prisma.favorite.deleteMany({
+        where: { userId: user.id, radioId },
+      });
+
+      if (result.count === 0) {
+        res.status(404).json({ error: 'Favorite not found' });
+        return;
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      logger.error(
+        'Unexpected error while deleting favorite',
+        errorContext(error),
+      );
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  },
+);

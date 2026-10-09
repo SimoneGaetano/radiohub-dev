@@ -293,7 +293,9 @@ async function searchViaRadioBrowser(params: {
   const payload: unknown = await response.json();
   const parsed = upstreamResponseSchema.safeParse(payload);
   if (!parsed.success) {
-    throw new UpstreamError('Unexpected payload from the upstream radio source');
+    throw new UpstreamError(
+      'Unexpected payload from the upstream radio source',
+    );
   }
 
   return parsed.data.map(toStation);
@@ -338,7 +340,9 @@ export async function fetchStationsByIds(
 
   const payload: unknown = await response.json();
   if (!Array.isArray(payload)) {
-    throw new UpstreamError('Unexpected payload from the upstream radio source');
+    throw new UpstreamError(
+      'Unexpected payload from the upstream radio source',
+    );
   }
 
   const stations: RadioStation[] = [];
@@ -384,7 +388,13 @@ function extractItems(payload: unknown): Record<string, unknown>[] {
  * fallback.
  */
 function toFmWorldStation(item: Record<string, unknown>): RadioStation | null {
-  const id = pickString(item, ['id', 'radioId', 'radio_id', 'stationId', 'uuid']);
+  const id = pickString(item, [
+    'id',
+    'radioId',
+    'radio_id',
+    'stationId',
+    'uuid',
+  ]);
   const name = pickString(item, ['name', 'title', 'radioName', 'label']);
   const url = pickString(item, [
     'streamUrl',
@@ -403,9 +413,19 @@ function toFmWorldStation(item: Record<string, unknown>): RadioStation | null {
     id,
     name,
     url,
-    favicon: pickString(item, ['logo', 'logoUrl', 'image', 'imageUrl', 'favicon']),
+    favicon: pickString(item, [
+      'logo',
+      'logoUrl',
+      'image',
+      'imageUrl',
+      'favicon',
+    ]),
     country: pickString(item, ['country', 'countryName', 'nation']),
-    countryCode: pickString(item, ['countryCode', 'country_code', 'iso']).toUpperCase(),
+    countryCode: pickString(item, [
+      'countryCode',
+      'country_code',
+      'iso',
+    ]).toUpperCase(),
     language: pickString(item, ['language', 'lang']),
     tags: pickTags(item),
     votes: pickNumber(item, ['votes', 'likes', 'rating']),

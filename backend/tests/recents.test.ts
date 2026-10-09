@@ -15,7 +15,9 @@ let userId = '';
 
 beforeAll(async () => {
   await request(app).post('/api/auth/register').send({ email, password });
-  const login = await request(app).post('/api/auth/login').send({ email, password });
+  const login = await request(app)
+    .post('/api/auth/login')
+    .send({ email, password });
   token = login.body.token as string;
 
   const user = await prisma.user.findUnique({
@@ -67,7 +69,9 @@ describe('GET|POST|DELETE /api/recents (cronologia per utente)', () => {
     );
 
     const response = await authed(request(app).get('/api/recents'));
-    const ids = response.body.data.map((row: { radioId: string }) => row.radioId);
+    const ids = response.body.data.map(
+      (row: { radioId: string }) => row.radioId,
+    );
 
     expect(ids).toEqual(['radio-a', 'radio-b']);
     expect(ids.filter((id: string) => id === 'radio-a')).toHaveLength(1);
@@ -76,7 +80,9 @@ describe('GET|POST|DELETE /api/recents (cronologia per utente)', () => {
   it('tiene al massimo 10 stazioni', async () => {
     for (let index = 0; index < 12; index += 1) {
       await authed(
-        request(app).post('/api/recents').send({ radioId: `radio-${index}` }),
+        request(app)
+          .post('/api/recents')
+          .send({ radioId: `radio-${index}` }),
       );
     }
 

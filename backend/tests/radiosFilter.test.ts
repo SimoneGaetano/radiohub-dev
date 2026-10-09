@@ -32,7 +32,9 @@ describe('GET /api/radios — filtri server-side delle pill', () => {
 
   it('rifiuta bitrateMin fuori intervallo con 400', async () => {
     for (const value of ['0', 'abc', '99999']) {
-      const response = await request(app).get(`/api/radios?bitrateMin=${value}`);
+      const response = await request(app).get(
+        `/api/radios?bitrateMin=${value}`,
+      );
       expect(response.status).toBe(400);
     }
   });
@@ -44,25 +46,35 @@ describe('GET /api/radios — filtri server-side delle pill', () => {
     expect(response.body.error).toBe('Invalid query parameters');
   });
 
-  it('accetta i filtri usati dalle pill (validazione)', async () => {
-    const response = await request(app).get(
-      '/api/radios?tag=jazz,blues,soul&countryCode=IT&order=votes&limit=5',
-    );
+  it(
+    'accetta i filtri usati dalle pill (validazione)',
+    async () => {
+      const response = await request(app).get(
+        '/api/radios?tag=jazz,blues,soul&countryCode=IT&order=votes&limit=5',
+      );
 
-    // Il contenuto dipende dall'upstream: qui interessa che la validazione passi.
-    expect(response.status).not.toBe(400);
-  }, LIVE_SOURCE_TIMEOUT_MS);
+      // Il contenuto dipende dall'upstream: qui interessa che la validazione passi.
+      expect(response.status).not.toBe(400);
+    },
+    LIVE_SOURCE_TIMEOUT_MS,
+  );
 
   /**
    * B1 names the parameter `query` while the frontend sends `q`: both must work
    * and the value must actually reach the upstream call (`meta.query`).
    */
-  it('accetta ?query= come alias di ?q= (B1)', async () => {
-    const response = await request(app).get('/api/radios?query=radio&limit=5');
+  it(
+    'accetta ?query= come alias di ?q= (B1)',
+    async () => {
+      const response = await request(app).get(
+        '/api/radios?query=radio&limit=5',
+      );
 
-    expect(response.status).toBe(200);
-    expect(response.body.meta.query).toBe('radio');
-  }, LIVE_SOURCE_TIMEOUT_MS);
+      expect(response.status).toBe(200);
+      expect(response.body.meta.query).toBe('radio');
+    },
+    LIVE_SOURCE_TIMEOUT_MS,
+  );
 });
 
 describe('buildCacheKey — ogni filtro entra nella chiave', () => {

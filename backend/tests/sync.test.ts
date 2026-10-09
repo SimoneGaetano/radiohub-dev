@@ -82,12 +82,7 @@ describe('POST /api/sync (sincronizzazione manuale, B2)', () => {
 
   it('importa i post, conta inseriti/aggiornati e invalida la cache', async () => {
     // Cache "sporca" prima della sync: deve sparire a fine sincronizzazione.
-    await redis.set(
-      CACHE_KEY,
-      JSON.stringify([{ sentinel: true }]),
-      'EX',
-      60,
-    );
+    await redis.set(CACHE_KEY, JSON.stringify([{ sentinel: true }]), 'EX', 60);
 
     stubFeed(FEED);
     const first = await request(app)

@@ -68,7 +68,10 @@ recentsRouter.post('/recents', authenticateJWT, async (req, res) => {
 
     res.status(201).json({ data: recent });
   } catch (error) {
-    logger.error('Unexpected error while storing a recent', errorContext(error));
+    logger.error(
+      'Unexpected error while storing a recent',
+      errorContext(error),
+    );
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -80,7 +83,10 @@ recentsRouter.delete('/recents', authenticateJWT, async (req, res) => {
     await prisma.recentPlay.deleteMany({ where: { userId: user.id } });
     res.status(204).send();
   } catch (error) {
-    logger.error('Unexpected error while clearing recents', errorContext(error));
+    logger.error(
+      'Unexpected error while clearing recents',
+      errorContext(error),
+    );
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });

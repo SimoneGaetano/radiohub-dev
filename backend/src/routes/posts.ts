@@ -57,7 +57,6 @@ postsRouter.get('/posts', authenticateJWTOptional, async (req, res) => {
       }
     }
 
-
     let data: unknown[];
     if (userId) {
       const rows = await prisma.post.findMany({

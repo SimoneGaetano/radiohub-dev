@@ -32,12 +32,12 @@ export interface RadioInfoSource {
  * Used whenever no real API key is configured or the provider fails — it never
  * reuses a fixed template: the wording adapts to the data actually provided.
  */
-export function buildFallbackBio(
-  radioName: string,
-  country?: string,
-): string {
+export function buildFallbackBio(radioName: string, country?: string): string {
   const name = radioName.trim() || 'Questa stazione';
-  const origin = country && country.trim().length > 0 ? `di ${country.trim()}` : 'della rete';
+  const origin =
+    country && country.trim().length > 0
+      ? `di ${country.trim()}`
+      : 'della rete';
   return (
     `${name} è una stazione radio ${origin} che accompagna le giornate con una ` +
     'selezione musicale fresca e variegata, tra successi del momento e classici ' +
@@ -121,7 +121,9 @@ class GeminiRadioInfoSource implements RadioInfoSource {
 
         if (response.ok) {
           const data = (await response.json()) as {
-            candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+            candidates?: Array<{
+              content?: { parts?: Array<{ text?: string }> };
+            }>;
           };
           const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
           return text && text.length > 0 ? text : null;

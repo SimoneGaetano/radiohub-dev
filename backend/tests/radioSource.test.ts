@@ -133,8 +133,7 @@ describe('fetchRadios — FM-World è la fonte primaria (B1)', () => {
       '/client2/radios?limit=5&query=jazz',
     );
     const init = firstCall?.[1] as
-      | { headers?: Record<string, string> }
-      | undefined;
+      { headers?: Record<string, string> } | undefined;
     // Il token vive **solo lato server**: entra nell'header, mai nella risposta.
     expect(init?.headers?.Authorization).toBe(
       `Bearer ${env.FM_WORLD_API_TOKEN}`,
@@ -196,7 +195,11 @@ describe('fetchRadios — fallback su Radio Browser (B1)', () => {
         if (isFmWorld(String(input))) {
           throw timeout;
         }
-        return { ok: true, status: 200, json: async () => [RADIO_BROWSER_ITEM] };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [RADIO_BROWSER_ITEM],
+        };
       }),
     );
 

@@ -2,6 +2,41 @@
 
 Monorepo del progetto **RadioHub**.
 
+## Requisiti svolti
+
+Copertura della traccia **22HBG**, con il rimando alla prova nel repository.
+Legenda: `[x]` fatto · `[~]` parziale · `[ ]` non svolto.
+
+### Obbligatori — 18/18
+
+| Gruppo | Requisiti | Dove sta la prova |
+| --- | --- | --- |
+| **Backend** (B1–B5) | proxy radio con token lato server, job sul feed, cache Redis, auth JWT, OpenAPI | `backend/src/services/{radioSource,newsSyncService,authService}.ts`, `backend/src/docs/openapi.ts`, `backend/tests/` |
+| **Frontend** (F1–F5) | ricerca con debounce, player HLS persistente, notizie con filtro e scroll infinito, preferiti, WCAG 2.1 AA | `frontend/src/components/`, `frontend/tests/` |
+| **Integrazione AI** (A1–A3) | riassunti salvati al primo giro, provider astratto, timeout e difese sui testi | `backend/src/services/{summaryService,aiService}.ts` |
+| **DevOps** (D1–D5) | `docker compose up`, configurazione solo da env, ESLint + Prettier, test, log strutturati e health | `docker-compose.yml`, `backend/src/config/env.ts`, `.github/workflows/ci.yml` |
+
+Il dettaglio per singolo requisito, con il file e i test che lo coprono, sta in
+[`TASKS.md`](./TASKS.md).
+
+### Requisiti bonus svolti
+
+| # | Bonus | Stato | Dove sta la prova |
+| --- | --- | --- | --- |
+| **X1** | Pipeline CI con lint, test e build | `[x]` | `.github/workflows/ci.yml`: `lint`, `format:check`, typecheck, test backend (83) e frontend (13), build — con Postgres e Redis reali come servizi |
+| **X7** | PWA installabile, tema chiaro/scuro, condivisione radio | `[x]` | `frontend/public/manifest.json`, `frontend/public/sw.js`, `frontend/src/utils/{theme,installPrompt}.ts`, copia del link in `RadioCard` |
+| **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), `POST /api/auth/refresh` e `/api/auth/logout` (`authService.ts`), rinnovo trasparente in `frontend/src/services/api.ts`; 13 test (`tests/rateLimit.test.ts`, `tests/refreshToken.test.ts`) |
+
+**Perché questi tre.** X1 perché la CI è la prova che i test passano su una
+macchina diversa dalla mia, e non solo sulla mia; X7 perché rende l'app usabile
+da telefono come un'app vera — installazione, tema, condivisione — e tocca
+accessibilità e UX, non solo funzionalità; X6 perché è l'unico che cambia la
+**postura** dell'app, non le sue funzioni: quote per non farsi abusare e sessioni
+brevi ma rinnovabili, con il logout che finalmente ha un effetto sul server.
+
+Gli altri bonus (X2 deploy, X3 linguaggio naturale, X4 RAG sulle notizie, X5 SSE,
+X8 E2E) sono valutati in [`TASKS.md`](./TASKS.md), con il motivo della scelta.
+
 ## Struttura
 
 ```
@@ -562,6 +597,71 @@ perché è così che parte il progetto) e `operation-4xx-response` (×3 — sugl
 endpoint `/`, `/api/health` e `/api/health/ready`, che per definizione non
 possono rispondere 4xx).
 
+## Sicurezza e quote (X6)
+
+`helmet()` e CORS sono attivi fin dalla prima versione; con X6 si aggiungono il
+**rate limiting** e il **refresh token**.
+
+### Rate limiting
+
+Contatori su **Redis** (non in memoria: con più istanze del backend ogni istanza
+avrebbe la propria quota, cioè una quota moltiplicata per il numero di istanze) a
+finestra fissa, `INCR` + `TTL`. Tre quote, tutte configurabili da ambiente:
+
+| Quota | Default | Perché |
+| --- | --- | --- |
+| Generale `/api` | 300/min per IP | uso normale senza intralci |
+| `login` + `register` | 10 ogni 15 min per IP | forza bruta sulle password |
+| Riassunti AI | 20 ogni 5 min per **utente** | è l'unica chiamata che costa |
+
+Dettagli che contano:
+
+- **IP reale dietro nginx**: `app.set('trust proxy', 1)` in `app.ts`.
+  `frontend/nginx.conf` accoda `$remote_addr` a `X-Forwarded-For`, quindi Express
+  legge l'ultimo valore dell'header — quello aggiunto dal proxy. Senza quella
+  riga `req.ip` sarebbe l'IP del container del frontend per **tutti** i client e
+  la quota generale diventerebbe un'unica quota condivisa. Un
+  `X-Forwarded-For` falsificato dal client finisce più a sinistra e non sposta la
+  chiave.
+- **Health e docs fuori quota**: i limiter sono montati dopo `/api/health` e
+  `/api/docs`, così l'healthcheck di Docker non può restare bloccato da un client
+  rumoroso.
+- **IPv4 e IPv6 normalizzati**: Node presenta un IPv4 su socket dual-stack come
+  `::ffff:172.21.0.1`. Senza normalizzare, lo stesso client otterrebbe **due
+  quote diverse** passando dal proxy (`172.21.0.1`) o da una connessione diretta
+  (`::ffff:172.21.0.1`): difetto trovato in verifica leggendo le chiavi in Redis,
+  non previsto a tavolino, e ora coperto da un test.
+- **Fail-open dichiarato**: se Redis non risponde la richiesta passa e l'evento
+  finisce nei log come `WARN`. È la stessa scelta della cache (B3): un Redis giù
+  peggiora il servizio, non lo spegne.
+- **Risposta `429`** con `Retry-After` e `RateLimit-Limit` / `-Remaining` /
+  `-Reset` (bozza IETF): un client sa quando riprovare invece di ritentare a caso.
+- **Nei test le quote sono alzate** (`vitest.config.ts`): la suite fa centinaia di
+  richieste dallo stesso IP e con le quote reali fallirebbe per `429` su motivi
+  che non sta verificando. Le soglie vere — `429` compreso — sono coperte da
+  `tests/rateLimit.test.ts`, che istanzia il middleware con i propri valori e uno
+  store iniettato.
+
+### Refresh token
+
+Il JWT resta breve (1 h) e **non** viene allungato: si aggiunge un secondo
+gettone, opaco (32 byte casuali, non un JWT) e **monouso**, salvato in Redis
+**hashato** (SHA-256) — così un dump di Redis non consegna sessioni utilizzabili.
+
+- `POST /api/auth/login` restituisce `token` + `refreshToken`.
+- `POST /api/auth/refresh` consuma il gettone e ne emette uno nuovo: è la
+  **rotazione**, e un gettone già usato riceve `401` (il riuso di un gettone
+  intercettato non funziona).
+- `POST /api/auth/logout` lo revoca lato server: prima di X6 il logout era solo
+  lato client e il JWT restava valido fino a scadenza.
+- Il frontend rinnova **in modo trasparente**: un `401` su una rotta applicativa
+  innesca un solo rinnovo (più `401` simultanei condividono la stessa richiesta),
+  poi la richiesta originale viene ripetuta **una volta**. Il rinnovo salta le
+  rotte `/auth/*` (lì un `401` significa "credenziali sbagliate") e un guasto
+  temporaneo (`503`) **non** chiude la sessione: si chiude solo se il server
+  rifiuta il gettone (`400`/`401`), e in quel caso lo store Redux viene avvisato
+  con un callback registrato in `main.tsx`.
+
 ## Limiti noti
 
 - **B1 — token FM-World fornito non più valido**: il percorso primario esiste e
@@ -589,3 +689,21 @@ possono rispondere 4xx).
   riassunto è prodotto dal provider offline e marcato con il prefisso
   `[MOCK SUMMARY]`, ripulito a video dal frontend. Per usare il modello reale basta
   configurare `GEMINI_API_KEY` o `OPENAI_API_KEY` (e, se serve, `SUMMARY_MODEL`).
+- **X6 — il JWT non si revoca**: il logout cancella il refresh token, quindi la
+  sessione non è più rinnovabile, ma l'access token **già emesso** resta valido
+  fino alla sua scadenza (1 h). È il prezzo di un token senza stato; una revoca
+  immediata richiederebbe una blacklist consultata a ogni richiesta (o sessioni
+  server-side al posto dei JWT). Il comportamento è fissato da un test in
+  `tests/refreshToken.test.ts` ("limite dichiarato"), così non è una svista.
+- **X6 — rotazione senza "famiglia"**: un refresh token riutilizzato viene
+  rifiutato, ma non revoco anche la sessione che ne è derivata: non traccio un id
+  di famiglia per catena di rotazioni. Con il token hashato e di 32 byte, il
+  gettone rubato è comunque monouso.
+- **X6 — TTL non atomico**: `INCR` è atomico, la posa del TTL no: due primissime
+  richieste nello stesso istante possono allungare la finestra di qualche
+  millisecondo. È dichiarato nel codice e non è un modo per aggirare la quota
+  (il contatore resta esatto).
+- **X6 — finestra fissa, non sliding**: a cavallo fra due finestre si possono
+  fare fino a `2 × max` richieste ravvicinate. Accettato e motivato: la finestra
+  stretta (credenziali) dura 15 minuti, quindi il caso peggiore restano 10
+  tentativi, e una finestra scorrevole costerebbe una struttura per richiesta.

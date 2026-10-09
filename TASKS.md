@@ -33,31 +33,44 @@ quelle del documento di consegna.
 | **D4** | Test unitari + integrazione backend, **RTL sul frontend** | `[x]` | backend **83 test in 11 file**; frontend **13 test** (`tests/SearchBar.test.tsx`, `tests/Player.test.tsx`) con `npm test` in CI |
 | **D5** | Log strutturati, `GET /api/health` con DB e Redis | `[x]` | `utils/logger.ts` (JSON in produzione), `routes/health.ts` |
 
-### Bonus — 2 completi, 1 parziale
+### Bonus — 3 completi, 0 parziali
 
 | # | Bonus | Stato | Dove sta la prova |
 | --- | --- | --- | --- |
 | **X1** | Pipeline CI con lint, test e build | `[x]` | `.github/workflows/ci.yml`: typecheck + 83 test + build, con Postgres e Redis reali |
 | **X7** | PWA installabile, tema chiaro/scuro, condivisione radio | `[x]` | `manifest.json`, `sw.js`, `utils/{theme,installPrompt}.ts`, copia link in `RadioCard` |
-| **X6** | Rate limiting, helmet, CORS, refresh token | `[~]` | `helmet()` e `cors()` attivi; **mancano rate limiting e refresh token** |
+| **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), rate limiting montato in `app.ts` (health e docs esclusi, `trust proxy`), refresh token monouso in `authService.ts` + `POST /api/auth/refresh`/`logout`, rinnovo trasparente in `frontend/src/services/api.ts`, 13 test |
 | X2 | Deploy su un cloud con URL pubblico | `[ ]` | — |
 | X3 | Ricerca in linguaggio naturale | `[ ]` | — |
 | X4 | Domande sulle notizie (RAG) con fonti | `[ ]` | — |
 | X5 | Aggiornamento in tempo reale (WebSocket o SSE) | `[ ]` | — |
 | X8 | E2E con Playwright (cerca → ascolta → preferiti) | `[ ]` | — |
 
-## 2. Cosa manca, in ordine di rapporto valore/sforzo
+## 2. Piano dei bonus (deciso il 10/10, consegna 17/10)
 
-| # | Cosa | Tipo | Sforzo |
+Ordine per rapporto valore/rischio: prima i bonus a costo basso e rischio noto,
+ultimi i due che possono sfuggire di mano (deploy su servizi esterni, E2E
+intrinsecamente instabile). Regola: un bonus o è **fatto + testato + documentato**,
+o è **dichiarato non svolto con il motivo** — mai lasciato a metà.
+
+| # | Cosa | Sforzo | Stato |
 | --- | --- | --- | --- |
-| 1 | **Consegna** — sezione *Requisiti svolti* nel `README.md` | consegna | 20 min |
-| 2 | **X5** — nuovi post in tempo reale (SSE) | bonus | medio |
-| 3 | **X6** — rate limiting e refresh token (2 dei 4 pezzi già fatti) | bonus | medio |
-| — | X2 / X3 / X4 / X8 | bonus | alti |
+| — | **Consegna** — sezione *Requisiti svolti* nel `README.md` | 20 min | `[x]` |
+| 1 | **X6** — rate limiting e refresh token (2 dei 4 pezzi già fatti) | 3-4 h | `[x]` fatto |
+| 2 | **X5** — nuovi post in tempo reale (SSE) | 3 h | `[ ]` |
+| 3 | **X3** — ricerca in linguaggio naturale | 2-3 h | `[ ]` |
+| 4 | **X2** — deploy con URL pubblico | 3-6 h | `[ ]` |
+| 5 | **X4** — domande sulle notizie (RAG) con fonti | 4 h | `[ ]` |
+| 6 | **X8** — E2E Playwright (cerca → ascolta → preferiti) | 4 h | `[ ]` |
+
+X2 e X8 per ultimi con "revert policy": se non reggono, si dichiarano non svolti e
+si passa oltre, senza bruciare ore. Fra un bonus e l'altro va lasciato il tempo
+per la preparazione al colloquio (debrief per area: cosa ho cambiato, perché, dove
+si interviene).
 
 ### Task interne ancora aperte (non richieste dalla traccia)
 
-- [ ] **1.6** Rate limiting distribuito e gestione sessioni/token
+- [x] **1.6** Rate limiting distribuito e gestione sessioni/token (X6: `middleware/rateLimit.ts` + refresh token su Redis)
 - [ ] **2.5** Modulo stazioni radio (persistenza/CRUD)
 - [ ] **2.6** Miglioramenti UX sugli errori della fonte radio (`502`): mantenere la griglia già caricata, banner "Riprova", un retry su `429`/`503`, e **loggare il `502`** (oggi silenzioso nei log)
 
@@ -75,7 +88,7 @@ Il dettaglio (diagnosi, misure, prima/dopo) sta in
 - [x] **1.3** Integrazione Redis: client condiviso e graceful shutdown
 - [x] **1.4** Migrazione iniziale e avvio infrastruttura (Postgres su host `5433`)
 - [x] **1.5** Seed del database, idempotente
-- [ ] **1.6** Rate limiting distribuito e gestione sessioni/token
+- [x] **1.6** Rate limiting distribuito e gestione sessioni/token (chiusa con X6)
 
 ### Milestone 2 — Proxy Radio & Caching Redis
 

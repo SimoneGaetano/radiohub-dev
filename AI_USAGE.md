@@ -55,6 +55,19 @@ potrebbe chiedersene il motivo.
 - **Il middleware JWT è applicato per-rotta** e non con `router.use(...)`,
   perché quest'ultimo si attiverebbe anche su rotte non protette montate sullo
   stesso prefisso `/api`.
+- **`trust proxy` è obbligatorio per il rate limiting dietro nginx.** Senza
+  `app.set('trust proxy', 1)` `req.ip` sarebbe l'IP del container del frontend
+  per **tutti** i client e la quota per IP diventerebbe un'unica quota condivisa.
+  Non basta stare dietro un proxy: bisogna dichiarare quanti hop fidarsi, e nginx
+  deve accodare `$remote_addr` a `X-Forwarded-For` (lo fa già).
+- **Il refresh token è hashato in Redis e monouso.** Salvarlo in chiaro avrebbe
+  reso un dump di Redis equivalente a un elenco di sessioni attive; la rotazione
+  fa sì che un gettone intercettato valga un solo uso. Un `503` sul rinnovo non
+  deve cancellare la sessione: è un guasto nostro, non un gettone invalido.
+- **Nei test le quote di rate limiting vanno alzate.** La suite fa centinaia di
+  richieste dallo stesso IP: con le quote reali fallirebbe per `429` sui motivi
+  sbagliati. Le soglie vere — `429` compreso — sono verificate da un test
+  dedicato che costruisce il middleware con i propri valori e uno store iniettato.
 
 ## 4. Verifica automatizzata
 
@@ -85,8 +98,10 @@ del codice:
 
 ## 6. Lavoro ancora manuale
 
-- **Rate limiting sulle API (bonus X6)**: `helmet` e CORS sono attivi, la
-  limitazione delle richieste no.
+- **Rate limiting e refresh token (bonus X6)**: chiusi — vedi la sezione *Sicurezza
+  e quote (X6)* nel README. Restano dichiarati i limiti: il JWT già emesso non si
+  revoca al logout, la rotazione non traccia la "famiglia" dei gettoni e la
+  finestra del contatore è fissa (non sliding).
 - **Provider IA reale**: integrato (Gemini/OpenAI) e selezionabile con
   `SUMMARY_PROVIDER`, ma il default resta il **mock** per far partire l'app
   anche senza chiavi API.

@@ -1,0 +1,22 @@
+# Prettier non formatta ciò che non è codice scritto a mano.
+
+node_modules/
+dist/
+build/
+coverage/
+
+# Client Prisma generato (migliaia di righe, si rigenera da solo).
+backend/src/generated/
+
+# Bundle di terze parti vendorizzato per /api/docs: riformattarlo lo romperebbe.
+backend/public/rapidoc-min.js
+
+# Lockfile: generato da npm.
+package-lock.json
+
+# File di lavoro locali (già in .gitignore).
+diag.png
+frontend/shot-*.png
+frontend/tmp-*.mjs
+
+*.log

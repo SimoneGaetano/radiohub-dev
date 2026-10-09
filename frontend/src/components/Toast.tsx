@@ -24,14 +24,14 @@ const TOAST_DURATION_MS = 4500;
 const MAX_VISIBLE = 3;
 
 const TONE_BORDER: Record<ToastTone, string> = {
-  success: 'border-emerald-700/60',
+  success: 'border-accent-border/60',
   error: 'border-red-800/70',
   info: 'border-slate-700',
 };
 
 function ToneIcon({ tone }: { tone: ToastTone }) {
   if (tone === 'success') {
-    return <Check className="h-4 w-4 text-emerald-400" aria-hidden="true" />;
+    return <Check className="h-4 w-4 text-accent-text" aria-hidden="true" />;
   }
   if (tone === 'error') {
     return <AlertTriangle className="h-4 w-4 text-red-400" aria-hidden="true" />;
@@ -103,7 +103,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               type="button"
               onClick={() => dismiss(item.id)}
               aria-label="Chiudi avviso"
-              className="-mr-1 shrink-0 rounded p-0.5 text-slate-500 transition hover:text-slate-200"
+              className="-mr-1 shrink-0 rounded p-0.5 text-slate-400 transition hover:text-slate-200"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>

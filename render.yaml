@@ -1,0 +1,90 @@
+# RadioHub — blueprint di deploy su Render (X2).
+#
+# NON è stato provato contro il servizio: creare l'account richiede email e
+# carta, quindi la strada guidata in `DEPLOY.md` (dashboard, passo per passo) è
+# quella consigliata. Questo file è l'alternativa "infrastruttura come codice",
+# da usare una volta capito l'ordine delle cose; se Render si lamenta di un
+# campo, `DEPLOY.md` spiega come fare gli stessi passi a mano.
+#
+# Quattro risorse: frontend (nginx + build statica + proxy /api), backend (API,
+# applica migrazioni e seed all'avvio), PostgreSQL e Redis.
+
+services:
+  - type: web
+    name: radiohub-backend
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # D5: la stessa sonda usata dall'healthcheck di docker-compose.
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render assegna una porta sua: il backend la legge da `PORT` (env.ts).
+      - key: PORT
+        value: "4000"
+      # 2 hop: l'edge di Render davanti al servizio. Con 1 il rate limiting
+      # conterebbe l'IP del proxy invece di quello del client.
+      - key: TRUST_PROXY
+        value: "2"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: radiohub-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: radiohub-redis
+          property: connectionString
+      # Generati dalla piattaforma: non passano mai da un file versionato.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SYNC_API_KEY
+        generateValue: true
+      # `auto`: usa Gemini se la chiave c'è, altrimenti le regole locali.
+      - key: SUMMARY_PROVIDER
+        value: auto
+      # Da inserire a mano nella dashboard (mai nel repository).
+      - key: GEMINI_API_KEY
+        sync: false
+      # `all.` invece del mirror singolo: il nome consigliato da Radio Browser.
+      - key: RADIO_API_BASE_URL
+        value: https://all.api.radio-browser.info
+      # Meno traffico in uscita di default: ogni 15 minuti invece di 5.
+      - key: NEWS_SYNC_INTERVAL_SECONDS
+        value: "900"
+
+  - type: web
+    name: radiohub-frontend
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    healthCheckPath: /
+    envVars:
+      # Il template di nginx (`envsubst` all'avvio) legge questi due valori:
+      # senza, il proxy /api punterebbe a un host che non esiste.
+      - key: BACKEND_HOST
+        fromService:
+          type: web
+          name: radiohub-backend
+          property: host
+      - key: BACKEND_PORT
+        value: "4000"
+
+  - type: keyvalue
+    name: radiohub-redis
+    plan: free
+    region: frankfurt
+    # Solo rete interna: la cache non deve essere raggiungibile dall'esterno.
+    ipAllowList: []
+
+databases:
+  - name: radiohub-db
+    plan: free
+    region: frankfurt
+    databaseName: radiohub
+    user: radiohub

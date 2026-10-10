@@ -5,6 +5,8 @@ import {
   TOKEN_STORAGE_KEY,
 } from '../../services/api';
 import type {
+  NewsAnswer,
+  NewsAnswerResponse,
   Post,
   PostsResponse,
   SummaryResponse,
@@ -38,6 +40,12 @@ interface PostsState {
   titleFilter: string;
   /** How many rows of `items` are visible: client-side paging (F3). */
   visible: number;
+  /** X4 — ultima risposta alle notizie, con le fonti usate. */
+  ask: NewsAnswer | null;
+  /** X4 — domanda in corso (il modello può metterci qualche secondo). */
+  asking: boolean;
+  /** X4 — errore dell'ultima domanda. */
+  askError: string | null;
 }
 
 const initialState: PostsState = {
@@ -49,6 +57,9 @@ const initialState: PostsState = {
   radioInfoLoading: false,
   titleFilter: '',
   visible: NEWS_PAGE_SIZE,
+  ask: null,
+  asking: false,
+  askError: null,
 };
 
 /** Summaries generated on this device while browsing as a guest. */
@@ -147,6 +158,26 @@ export const fetchRadioInfo = createAsyncThunk<
   }
 });
 
+/**
+ * X4 — chiede alle notizie e riceve risposta **con le fonti**.
+ * Il retrieval e la sintesi stanno nel backend; qui si conserva l'esito per
+ * mostrare la risposta, i passaggi usati e quali sono stati davvero citati.
+ */
+export const askNews = createAsyncThunk<
+  NewsAnswer,
+  string,
+  { rejectValue: string }
+>('posts/askNews', async (question, { rejectWithValue }) => {
+  try {
+    const { data } = await api.post<NewsAnswerResponse>('/posts/ask', {
+      question,
+    });
+    return data.data;
+  } catch (error) {
+    return rejectWithValue(extractErrorMessage(error));
+  }
+});
+
 const postsSlice = createSlice({
   name: 'posts',
   initialState,
@@ -223,6 +254,18 @@ const postsSlice = createSlice({
         state.radioInfoLoading = false;
         state.radioInfo = null;
         state.error = action.payload ?? 'Generazione bio non riuscita';
+      })
+      .addCase(askNews.pending, (state) => {
+        state.asking = true;
+        state.askError = null;
+      })
+      .addCase(askNews.fulfilled, (state, action) => {
+        state.asking = false;
+        state.ask = action.payload;
+      })
+      .addCase(askNews.rejected, (state, action) => {
+        state.asking = false;
+        state.askError = action.payload ?? 'Domanda non riuscita';
       });
   },
 });

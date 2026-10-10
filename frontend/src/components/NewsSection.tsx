@@ -18,6 +18,7 @@ import {
 } from '../features/posts/postsSlice';
 import { useDebounce } from '../hooks/useDebounce';
 import { usePostStream } from '../hooks/usePostStream';
+import { NewsAskPanel } from './NewsAskPanel';
 import type { Post } from '../types';
 import { useToast } from './Toast';
 import { NewsSkeleton } from './NewsSkeleton';
@@ -374,6 +375,9 @@ export function NewsSection() {
           </button>
         ) : null}
       </label>
+
+      {/* X4 — domande sul corpus delle notizie, con le fonti usate. */}
+      <NewsAskPanel />
 
       {body}
 

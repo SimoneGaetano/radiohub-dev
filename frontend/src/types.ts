@@ -64,6 +64,34 @@ export interface PostEventPayload {
   at: string;
 }
 
+/** X4 — passaggio di un articolo usato come fonte di una risposta. */
+export interface NewsSource {
+  postId: string;
+  title: string;
+  publishedAt: string;
+  /** Rilevanza TF-IDF: ordina i risultati, non è una probabilità. */
+  score: number;
+  excerpt: string;
+  matchedTerms: string[];
+}
+
+/** X4 — risposta a una domanda sulle notizie, con le fonti. */
+export interface NewsAnswer {
+  question: string;
+  /** Risposta del modello; `null` quando ha risposto il solo retrieval. */
+  answer: string | null;
+  sources: NewsSource[];
+  /** Id citati dal modello, filtrati sulle fonti recuperate. */
+  citationIds: string[];
+  source: 'ai' | 'retrieval';
+  provider: string | null;
+  fallbackReason: string | null;
+}
+
+export interface NewsAnswerResponse {
+  data: NewsAnswer;
+}
+
 export type CacheStatus = 'HIT' | 'MISS';
 
 export interface AuthUser {

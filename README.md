@@ -27,9 +27,10 @@ Il dettaglio per singolo requisito, con il file e i test che lo coprono, sta in
 | **X7** | PWA installabile, tema chiaro/scuro, condivisione radio | `[x]` | `frontend/public/manifest.json`, `frontend/public/sw.js`, `frontend/src/utils/{theme,installPrompt}.ts`, copia del link in `RadioCard` |
 | **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), `POST /api/auth/refresh` e `/api/auth/logout` (`authService.ts`), rinnovo trasparente in `frontend/src/services/api.ts`; 13 test (`tests/rateLimit.test.ts`, `tests/refreshToken.test.ts`) |
 | **X3** | Ricerca in linguaggio naturale | `[x]` | `POST /api/radios/search` (`backend/src/services/naturalSearchService.ts` + `modelClient.ts`): modello con risposta JSON validata da Zod e fallback a regole deterministiche (paesi + catene di tag delle pill); quota dedicata `nl-search`; 19 test backend e 4 frontend; README § *Ricerca in linguaggio naturale (X3)* |
-| **X5** | Aggiornamento in tempo reale (SSE) | `[x]` | `GET /api/posts/stream` + bus su **Redis pub/sub** (`backend/src/realtime/postEvents.ts`), `location` dedicata con `proxy_buffering off` in `frontend/nginx.conf`, hook `usePostStream` agganciato a `NewsSection`; 3 test backend e 3 frontend; README § *Notizie in tempo reale (X5)* |
+| **X5** | Aggiornamento in tempo reale (SSE) | `[x]` | `GET /api/posts/stream` + bus su **Redis pub/sub** (`backend/src/realtime/postEvents.ts`), `location` dedicata con `proxy_buffering off` in `frontend/nginx.conf.template`, hook `usePostStream` agganciato a `NewsSection`; 3 test backend e 3 frontend; README § *Notizie in tempo reale (X5)* |
 | **X4** | Domande sulle notizie (RAG) con fonti | `[x]` | `POST /api/posts/ask` (`backend/src/services/newsRagService.ts`): retrieval **TF-IDF** deterministico + sintesi del modello con citazioni **filtrate** sulle fonti recuperate; pannello `NewsAskPanel.tsx`; 16 test backend e 4 frontend; README § *Domande sulle notizie (X4)* |
 | **X8** | E2E con Playwright (cerca → ascolta → preferiti) | `[x]` | `frontend/e2e/cerca-ascolta-preferiti.spec.ts`: flusso completo sulla **stack reale** (`docker compose`) con catalogo e audio controllati — `npm run test:e2e`, ~5 s, stabile su due esecuzioni di fila; workflow separato `.github/workflows/e2e.yml`; README § *Test end-to-end (X8)* |
+| **X2** | Deploy su un cloud con URL pubblico | `[~]` | configurazione pronta e **provata in locale**: proxy nginx a *template* (`frontend/nginx.conf.template` + `BACKEND_HOST`/`BACKEND_PORT`), `TRUST_PROXY` configurabile, `render.yaml` e [`DEPLOY.md`](./DEPLOY.md) con passi e verifiche. **Manca l'URL pubblico**: creare l'account è un passo umano (~10 minuti, serve la tua email) |
 
 **Perché questi sette.** X1 perché la CI è la prova che i test passano su una
 macchina diversa dalla mia, e non solo sulla mia; X7 perché rende l'app usabile
@@ -43,10 +44,11 @@ perché aggiunge il "chiedi invece di scorrere", con le fonti a garanzia; X8 per
 verifica il percorso della traccia **come lo vede un utente**, non come lo vedono
 i test unitari.
 
-**Resta X2 (deploy con URL pubblico)**, valutato in [`TASKS.md`](./TASKS.md): è
-l'unico bonus il cui esito non dipende solo da me — richiede un servizio esterno e
-un URL che resti vivo almeno fino alla consegna. Se non regge si dichiara non
-svolto con il motivo, invece di consegnare un link rotto.
+**X2 (deploy) è pronto ma non svolto**: la configurazione è fatta e provata in
+locale, e la guida passo-passo è in [`DEPLOY.md`](./DEPLOY.md) — ma il bonus non è
+svolto finché non esiste un **URL pubblico verificato**, e quell'ultimo passo
+richiede un account (quindi è umano, non di codice). Quando l'URL esiste lo
+verifico e aggiorno questa riga: preferisco un `[~]` onesto a un link rotto.
 
 ## Struttura
 
@@ -628,7 +630,7 @@ finestra fissa, `INCR` + `TTL`. Tre quote, tutte configurabili da ambiente:
 Dettagli che contano:
 
 - **IP reale dietro nginx**: `app.set('trust proxy', 1)` in `app.ts`.
-  `frontend/nginx.conf` accoda `$remote_addr` a `X-Forwarded-For`, quindi Express
+  `frontend/nginx.conf.template` accoda `$remote_addr` a `X-Forwarded-For`, quindi Express
   legge l'ultimo valore dell'header — quello aggiunto dal proxy. Senza quella
   riga `req.ip` sarebbe l'IP del container del frontend per **tutti** i client e
   la quota generale diventerebbe un'unica quota condivisa. Un
@@ -773,7 +775,7 @@ Dettagli che contano, o l'SSE non funziona dietro un proxy:
 
 - **`X-Accel-Buffering: no` + `proxy_buffering off`**: senza questi due, nginx
   accumula la risposta in un buffer e gli eventi arrivano solo alla chiusura della
-  connessione, cioè mai. In `frontend/nginx.conf` c'è una `location
+  connessione, cioè mai. In `frontend/nginx.conf.template` c'è una `location
   /api/posts/stream` dedicata (prefisso più specifico, quindi vince sul `/api/`
   generico) con `proxy_read_timeout 1h`;
 - **heartbeat ogni 25 s**: un **commento** SSE (`: ping`), che non genera eventi
@@ -904,6 +906,29 @@ una stazione nei preferiti lo stesso pulsante esiste in due punti (griglia e
 sezione preferiti). Erano ambiguità del test, non difetti dell'app, ma sarebbero
 rimaste invisibili senza un'esecuzione reale. Ora i selettori sono esatti e il
 test gira due volte di fila in **4,7 s** e **4,9 s**.
+
+## Deploy pubblico (X2)
+
+La configurazione necessaria al deploy è fatta e **provata in locale**; i passi per
+portare l'app su un URL pubblico sono in [`DEPLOY.md`](./DEPLOY.md) (Render +
+`render.yaml`, con la strada manuale e le cinque cose che rompono un deploy).
+
+Due modifiche sono servite davvero, e sono la ragione per cui la configurazione
+locale e quella cloud ora sono **lo stesso artefatto**:
+
+- **Il proxy di nginx è un template** (`frontend/nginx.conf.template`):
+  `nginx:alpine` esegue `envsubst` all'avvio e sostituisce `BACKEND_HOST` /
+  `BACKEND_PORT`. Prima l'indirizzo del backend era scritto dentro l'immagine e
+  funzionava solo in Docker locale; ora la stessa immagine funziona in locale
+  (`backend:4000`) e su un cloud (l'host interno del servizio).
+- **`TRUST_PROXY` è configurabile**: in locale basta 1 hop (nginx del frontend), su
+  una piattaforma cloud che mette un proprio edge davanti all'app ne servono 2. Con
+  il valore sbagliato `req.ip` non è l'IP del client e il rate limiting conta la
+  chiave sbagliata — un difetto che in locale non si vedrebbe mai.
+
+**Stato**: `[~]`. Il deploy in sé non è stato eseguito perché creare l'account
+richiede email e (su alcune piattaforme) carta. Un bonus X2 senza URL non è X2,
+quindi la riga resta parziale finché l'URL non esiste e non è verificato.
 
 ## Limiti noti
 

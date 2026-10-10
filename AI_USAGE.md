@@ -120,6 +120,16 @@ potrebbe chiedersene il motivo.
   preferito lo stesso pulsante esiste in griglia e nella sezione dedicata:
   `exact: true` e `first()` dove serve. Li ha trovati la prima esecuzione reale,
   non una rilettura.
+- **Il proxy di nginx è un template, non un file con un indirizzo dentro (X2).**
+  Nella prima versione `proxy_pass` puntava a `backend:4000`, un nome che esiste
+  solo in `docker-compose`: la stessa immagine su un cloud non avrebbe funzionato.
+  Ora `envsubst` sostituisce `BACKEND_HOST`/`BACKEND_PORT` all'avvio, quindi locale
+  e cloud usano lo **stesso artefatto** e non due configurazioni da tenere allineate.
+- **`TRUST_PROXY` è una variabile, non una costante.** In locale c'è un solo proxy
+  (nginx), su una piattaforma cloud ce n'è un secondo davanti (l'edge della
+  piattaforma). Sbagliare il valore non rompe niente in locale: fa solo contare al
+  rate limiting l'IP del proxy invece di quello del client, uguale per tutti. I
+  difetti che non si vedono in locale vanno resi configurabili **prima** del deploy.
 
 ## 4. Verifica automatizzata
 
@@ -167,6 +177,11 @@ del codice:
   README. Limite dichiarato: catalogo e audio sono controllati dal test, quindi
   l'E2E verifica il percorso dell'utente e non l'integrazione con le fonti radio
   esterne (che resta coperta dai test unitari e dalle verifiche dal vivo).
+- **Deploy pubblico (bonus X2)**: **parziale e dichiarato tale**. La configurazione
+  è pronta e provata in locale (proxy a template, `TRUST_PROXY`, `render.yaml`,
+  `DEPLOY.md`), ma il deploy non è stato eseguito: creare l'account richiede email
+  e, su alcune piattaforme, carta. Un X2 senza URL verificato non è X2, quindi la
+  riga resta `[~]` in `TASKS.md`.
 - **Provider IA reale**: integrato (Gemini/OpenAI) e selezionabile con
   `SUMMARY_PROVIDER`, ma il default resta il **mock** per far partire l'app
   anche senza chiavi API.

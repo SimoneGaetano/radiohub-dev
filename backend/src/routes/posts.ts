@@ -16,6 +16,8 @@ import {
   connectedClients,
   removePostStreamClient,
 } from '../realtime/postEvents';
+import { newsAskRateLimiter } from '../middleware/rateLimit';
+import { askNews } from '../services/newsRagService';
 
 export const postsRouter = Router();
 
@@ -166,6 +168,44 @@ postsRouter.get('/posts/stream', (req, res) => {
     logger.info('SSE client disconnected', { clients: connectedClients() });
   });
 });
+
+/** X4 — schema del corpo di `POST /api/posts/ask`. */
+const askSchema = z.object({
+  question: z.string().trim().min(3).max(300),
+});
+
+/**
+ * X4 — risponde a una domanda sulle notizie **citando le fonti**.
+ *
+ * Restituisce la risposta del modello insieme ai passaggi che l'hanno generata
+ * (`sources`) e agli id che il modello dichiara di aver usato (`citationIds`),
+ * filtrati su ciò che è stato davvero recuperato. Senza modello configurato la
+ * rotta risponde comunque: i passaggi pertinenti, con `source: "retrieval"` e il
+ * motivo in `fallbackReason`.
+ */
+postsRouter.post(
+  '/posts/ask',
+  authenticateJWTOptional,
+  newsAskRateLimiter,
+  async (req, res) => {
+    const parsed = askSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'Invalid payload',
+        details: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    try {
+      const answer = await askNews(parsed.data.question);
+      res.json({ data: answer });
+    } catch (error) {
+      logger.error('News answer failed', errorContext(error));
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  },
+);
 
 /**
  * Returns the AI summary of a post: reads it from the database when already

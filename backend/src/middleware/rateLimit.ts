@@ -202,3 +202,14 @@ export const naturalSearchRateLimiter = createRateLimiter({
   windowSeconds: env.RATE_LIMIT_AI_WINDOW_SECONDS,
   keyGenerator: userOrIpKey,
 });
+
+/**
+ * Quota sulle domande alle notizie (X4): anche questa chiama il modello, sui
+ * passaggi recuperati. Bucket separato per lo stesso motivo di X3.
+ */
+export const newsAskRateLimiter = createRateLimiter({
+  bucket: 'news-ask',
+  max: env.RATE_LIMIT_AI_MAX,
+  windowSeconds: env.RATE_LIMIT_AI_WINDOW_SECONDS,
+  keyGenerator: userOrIpKey,
+});

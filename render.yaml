@@ -67,11 +67,15 @@ services:
     envVars:
       # Il template di nginx (`envsubst` all'avvio) legge questi due valori:
       # senza, il proxy /api punterebbe a un host che non esiste.
+      #
+      # Nome scritto esplicitamente e non `fromService`: in un deploy reale la
+      # creazione di questo servizio è **fallita** proprio perché il riferimento
+      # a un'altra risorsa dello stesso blueprint non veniva risolto (il backend,
+      # creato con la stessa forma e senza `fromService`, è andato a buon fine).
+      # Il nome del servizio backend è quello qui sopra: se lo cambi, cambia anche
+      # questo valore.
       - key: BACKEND_HOST
-        fromService:
-          type: web
-          name: radiohub-backend
-          property: host
+        value: radiohub-backend
       - key: BACKEND_PORT
         value: "4000"
 

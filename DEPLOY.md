@@ -45,11 +45,17 @@ senza scadenza — e incolla le due stringhe di connessione in `DATABASE_URL` e
 ### 2. Strada manuale (se il blueprint dà errore)
 
 > **Osservato in un deploy reale (10/10/2026)**: la blueprint ha creato *database*,
-> *cache* e *backend*, ma **non** il frontend. Il sospetto è la risoluzione di
-> `fromService` (`BACKEND_HOST` ricavato dal servizio backend) al momento della
-> creazione: sono due risorse dello stesso blueprint, e la seconda dipende dalla
-> prima. Non vale la pena combattere con la blueprint: si crea il frontend a mano
-> con i passi qui sotto, che sono **gli stessi** che avrebbe eseguito lei.
+> *cache* e *backend*, ma **non** il frontend, che è l'unica risorsa con un
+> riferimento a un'altra (`BACKEND_HOST` da `fromService`). Il backend, creato con
+> la stessa forma ma senza riferimenti, è andato a buon fine: è quello il punto.
+> Il `render.yaml` ora scrive `BACKEND_HOST` come valore esplicito (`radiohub-backend`),
+> quindi un nuovo sync non dovrebbe più inciampare.
+>
+> Nota per chi legge i log: `failed to read dockerfile: open Dockerfile: no such
+> file or directory` significa che il *Dockerfile Path* è stato messo a
+> `./Dockerfile` **senza** una Root Directory: Render lo cerca nella radice del
+> repo, dove non c'è. Il percorso corretto è `frontend/Dockerfile` (relativo alla
+> radice), esattamente come il backend usa `backend/Dockerfile`.
 
 `render.yaml` non è stato provato contro Render (non ho un account): se un campo
 non piace alla piattaforma, la dashboard dice quale. Gli stessi passi a mano:

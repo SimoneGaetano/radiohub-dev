@@ -54,6 +54,16 @@ export interface NaturalSearchResponse {
   data: NaturalSearchInterpretation;
 }
 
+/** X5 — evento pubblicato dal backend quando il sync trova post nuovi. */
+export interface PostEventPayload {
+  /** Post inseriti dall'ultima sincronizzazione. */
+  created: number;
+  /** Post aggiornati (il feed ha riscritto il testo). */
+  updated: number;
+  /** Istante della sincronizzazione, in ISO 8601. */
+  at: string;
+}
+
 export type CacheStatus = 'HIT' | 'MISS';
 
 export interface AuthUser {

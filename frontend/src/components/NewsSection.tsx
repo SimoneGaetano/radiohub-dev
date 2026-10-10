@@ -17,6 +17,7 @@ import {
   summarizePost,
 } from '../features/posts/postsSlice';
 import { useDebounce } from '../hooks/useDebounce';
+import { usePostStream } from '../hooks/usePostStream';
 import type { Post } from '../types';
 import { useToast } from './Toast';
 import { NewsSkeleton } from './NewsSkeleton';
@@ -115,6 +116,23 @@ export function NewsSection() {
     }, REFRESH_MS);
     return () => window.clearInterval(id);
   }, [dispatch, appliedTitle]);
+
+  /**
+   * X5 — quando il backend pubblica l'evento (sincronizzazione periodica o
+   * manuale) la lista si riallinea **subito**, senza attendere i 5 minuti.
+   * Il polling qui sopra resta come rete di sicurezza: se il flusso cade
+   * (proxy, rete, browser senza `EventSource`) il comportamento non cambia.
+   */
+  usePostStream((event) => {
+    void dispatch(
+      fetchPosts(appliedTitle ? { title: appliedTitle } : undefined),
+    );
+    showToast(
+      event.created > 0
+        ? `${event.created} nuove notizie dal feed`
+        : 'Notizie aggiornate dal feed',
+    );
+  });
 
   const visibleItems = items.slice(0, visible);
   const hasMore = visibleItems.length < items.length;

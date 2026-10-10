@@ -6,6 +6,12 @@ export const USER_STORAGE_KEY = 'radiohub.user';
 /** X6: gettone di rinnovo, letto dall'interceptor e non dallo store. */
 export const REFRESH_TOKEN_STORAGE_KEY = 'radiohub.refreshToken';
 
+/**
+ * Base delle API in un solo punto: la usano il client axios **e** il flusso SSE
+ * (X5), che non passa da axios ma deve puntare allo stesso posto.
+ */
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
+
 export interface ApiErrorBody {
   error?: string;
   message?: string;
@@ -15,7 +21,7 @@ export interface ApiErrorBody {
 type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean };
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 

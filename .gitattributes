@@ -4,6 +4,7 @@
 # (impostazione comune su Windows) git altrimenti li converte in CRLF, e il
 # `docker compose up` in locale smetterebbe di funzionare senza un motivo visibile.
 *.sh text eol=lf
+*.envsh text eol=lf
 Dockerfile text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf

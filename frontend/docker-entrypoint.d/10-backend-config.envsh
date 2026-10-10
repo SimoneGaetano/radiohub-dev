@@ -1,0 +1,97 @@
+# RadioHub — normalizzazione della configurazione del proxy (X2).
+#
+# *** FILE LETTO (sourced), NON ESEGUITO ***
+# L'entrypoint di nginx:alpine esegue i file di /docker-entrypoint.d/ in ordine
+# alfabetico, e i file `.envsh` vengono letti con `. file` invece che avviati in
+# una subshell: è l'unico modo perché le variabili normalizzate qui arrivino a
+# `20-envsubst-on-templates.sh`, che gira subito dopo ed è quello che riempie il
+# template di nginx.
+#
+# Perché esiste: `envsubst` fa una sostituzione **letterale**, senza validare.
+# Il caso che ha fatto fallire due deploy è incollare l'URL completo nella
+# variabile sbagliata: con `BACKEND_HOST=https://radiohub-backend.onrender.com`
+# la direttiva diventa `https://https://radiohub-backend...` e nginx esce con
+# `[emerg] invalid port in upstream`. Qui accettiamo entrambe le forme — nome host
+# o URL completo — e separiamo schema, host e porta. Se il valore è comunque
+# inutilizzabile, si esce **prima** di nginx con un messaggio che dice cosa fare.
+
+# Caso non recuperabile: un URL troncato (`://host`), dove il nome host è andato
+# perso. Meglio dirlo chiaramente che indovinare.
+case "${BACKEND_HOST:-}" in
+  ://* )
+    echo "BACKEND_HOST sembra un URL troncato: manca il nome host prima di '://' (valore attuale: '${BACKEND_HOST}')." >&2
+    echo "Incolla l'URL completo (https://radiohub-backend.onrender.com) oppure solo il nome host (radiohub-backend.onrender.com)." >&2
+    exit 1
+    ;;
+esac
+
+if [ -n "${BACKEND_HOST:-}" ]; then
+  # 1. Schema incollato insieme all'host: `https://host` → scheme + host.
+  case "$BACKEND_HOST" in
+    *://*)
+      BACKEND_SCHEME="${BACKEND_HOST%%://*}"
+      BACKEND_HOST="${BACKEND_HOST#*://}"
+      ;;
+  esac
+
+  # 2. Eventuale percorso o barra finale (`host/api`, `host/`).
+  BACKEND_HOST="${BACKEND_HOST%%/*}"
+
+  # 3. Eventuale porta attaccata all'host (`host:443`), solo se numerica.
+  case "$BACKEND_HOST" in
+    *:*)
+      case "${BACKEND_HOST##*:}" in
+        '' | *[!0-9]*) ;;
+        *)
+          BACKEND_PORT="${BACKEND_HOST##*:}"
+          BACKEND_HOST="${BACKEND_HOST%%:*}"
+          ;;
+      esac
+      ;;
+  esac
+fi
+
+# Valori di default: in locale (docker compose) arrivano già da lì.
+: "${BACKEND_SCHEME:=http}"
+: "${BACKEND_HOST:=backend}"
+: "${BACKEND_PORT:=4000}"
+export BACKEND_SCHEME BACKEND_HOST BACKEND_PORT
+
+problems=""
+case "$BACKEND_SCHEME" in
+  http | https) ;;
+  *)
+    problems="${problems}
+  BACKEND_SCHEME deve essere 'http' o 'https' (valore attuale: '${BACKEND_SCHEME}')"
+    ;;
+esac
+case "$BACKEND_HOST" in
+  '')
+    problems="${problems}
+  BACKEND_HOST è vuoto: serve il nome host del backend (es. radiohub-backend.onrender.com)"
+    ;;
+  *://* | */* | *:*)
+    problems="${problems}
+  BACKEND_HOST deve contenere solo il nome host (valore attuale: '${BACKEND_HOST}')"
+    ;;
+esac
+case "$BACKEND_PORT" in
+  '' | *[!0-9]*)
+    problems="${problems}
+  BACKEND_PORT deve essere un numero (valore attuale: '${BACKEND_PORT}')"
+    ;;
+esac
+
+if [ -n "$problems" ]; then
+  echo "Configurazione del proxy verso il backend non valida:$problems
+
+Sono accettate entrambe le forme:
+  BACKEND_HOST=radiohub-backend.onrender.com   (con BACKEND_SCHEME=https e BACKEND_PORT=443)
+  BACKEND_HOST=https://radiohub-backend.onrender.com
+
+In locale (docker compose) i valori sono già:
+  BACKEND_SCHEME=http  BACKEND_HOST=backend  BACKEND_PORT=4000" >&2
+  exit 1
+fi
+
+echo "Proxy verso il backend: ${BACKEND_SCHEME}://${BACKEND_HOST}:${BACKEND_PORT}"

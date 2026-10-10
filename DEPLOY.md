@@ -87,6 +87,9 @@ non piace alla piattaforma, la dashboard dice quale. Gli stessi passi a mano:
 
    Sono le due variabili che riempiono il template di nginx: è la modifica che
    rende la stessa immagine utilizzabile in locale e su un cloud.
+
+   `BACKEND_HOST` accetta **sia il nome host sia l'URL completo**
+   (`https://radiohub-backend.onrender.com`): il container li normalizza all'avvio.
 5. Attendi gli healthcheck: quando entrambi sono *Live*, apri l'URL del frontend.
 
 ### 3. Verifica sull'URL pubblico
@@ -119,10 +122,19 @@ la pagina e verifica che il preferito ci sia ancora.
    locale il proxy resta su `http://backend:4000`, senza cambiare l'immagine.
 
    Se invece il messaggio è `invalid port in upstream "://onrender.com:443"` o
-   `host not found`, il container ora **te lo dice in italiano** prima di partire:
-   `docker-entrypoint.d/10-check-backend.sh` valida le tre variabili e indica quale
-   campo correggere (esempio incluso). `envsubst` sostituisce senza controllare,
-   quindi senza quel controllo si vedrebbe solo l'errore di nginx.
+   `host not found`: `envsubst` sostituisce **senza validare**, quindi un valore
+   scritto male diventa una direttiva nginx rotta. Per questo il container, prima
+   di avviare nginx, passa da `docker-entrypoint.d/10-backend-config.envsh`, che
+   **normalizza** `BACKEND_SCHEME`/`BACKEND_HOST`/`BACKEND_PORT` e in caso di
+   problema esce con un messaggio che dice cosa fare:
+
+   - sono accettate **entrambe** le forme: `radiohub-backend.onrender.com` (nome
+     host) **e** `https://radiohub-backend.onrender.com` (URL completo — l'errore
+     più comune, e il motivo per cui la normalizzazione esiste);
+   - una porta attaccata all'host (`host:443`) viene separata da sola;
+   - se il valore è irrecuperabile (es. `://onrender.com`, privo del nome host) il
+     container lo dice **prima** di nginx e non parte, invece di produrre un errore
+     di nginx che non indica il campo sbagliato.
 1. **Il frontend risponde ma `/api/*` dà `502`** → `BACKEND_HOST`/`BACKEND_PORT`
    (o `BACKEND_SCHEME`) sbagliati: il template di nginx punta a un host che non
    esiste o al protocollo sbagliato.

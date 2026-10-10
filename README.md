@@ -935,6 +935,16 @@ una sola origine — ma puntarlo all'**URL pubblico** del backend con
 è una variabile: in locale resta `http://backend:4000`, senza cambiare l'immagine.
 Se invece la rete interna c'è, il proxy funziona come in locale.
 
+Il secondo insegnamento è stato più sottile: `envsubst` **sostituisce senza
+validare**, quindi un valore incollato male (l'URL completo nella variabile
+dell'host) produce una direttiva nginx rotta e un errore che non dice quale campo
+correggere. Prima di `envsubst` passa ora `docker-entrypoint.d/10-backend-config.envsh`
+(un file `.envsh` è *letto* dall'entrypoint, quindi le sue variabili arrivano al
+template), che accetta **nome host o URL completo**, separa la porta se attaccata
+e, se il valore è irrecuperabile, si ferma con un messaggio che dice cosa fare.
+Provato in locale: con l'URL completo incollato il container proxa davvero verso il
+backend su Render e `/api/health` risponde `200`.
+
 **Stato**: `[~]`. Il deploy in sé non è stato eseguito perché creare l'account
 richiede email e (su alcune piattaforme) carta. Un bonus X2 senza URL non è X2,
 quindi la riga resta parziale finché l'URL non esiste e non è verificato.

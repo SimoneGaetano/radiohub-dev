@@ -44,6 +44,13 @@ senza scadenza — e incolla le due stringhe di connessione in `DATABASE_URL` e
 
 ### 2. Strada manuale (se il blueprint dà errore)
 
+> **Osservato in un deploy reale (10/10/2026)**: la blueprint ha creato *database*,
+> *cache* e *backend*, ma **non** il frontend. Il sospetto è la risoluzione di
+> `fromService` (`BACKEND_HOST` ricavato dal servizio backend) al momento della
+> creazione: sono due risorse dello stesso blueprint, e la seconda dipende dalla
+> prima. Non vale la pena combattere con la blueprint: si crea il frontend a mano
+> con i passi qui sotto, che sono **gli stessi** che avrebbe eseguito lei.
+
 `render.yaml` non è stato provato contro Render (non ho un account): se un campo
 non piace alla piattaforma, la dashboard dice quale. Gli stessi passi a mano:
 
@@ -59,6 +66,18 @@ non piace alla piattaforma, la dashboard dice quale. Gli stessi passi a mano:
 4. **Frontend** → *New* → *Web Service* → Docker, context `frontend/`, health check
    `/`, variabili: `BACKEND_HOST` = host **interno** del backend (dashboard del
    backend → *Connect* → *Internal*, senza porta) e `BACKEND_PORT=4000`.
+
+   **Campi della dashboard, uno per uno** (monorepo: la *Root Directory* è ciò che
+   rende il contesto `frontend/`):
+   - *Name*: `radiohub-frontend`
+   - *Region*: **la stessa del backend** (senza, la rete interna non li collega)
+   - *Branch*: `main`
+   - *Root Directory*: `frontend`
+   - *Runtime*: **Docker** (Dockerfile path `./Dockerfile`)
+   - *Instance Type*: Free
+   - *Health Check Path*: `/`
+   - *Environment*: `BACKEND_HOST` = host interno del backend (senza porta),
+     `BACKEND_PORT` = `4000`
 
    Sono le due variabili che riempiono il template di nginx: è la modifica che
    rende la stessa immagine utilizzabile in locale e su un cloud.

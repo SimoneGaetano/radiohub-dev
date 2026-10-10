@@ -107,6 +107,19 @@ potrebbe chiedersene il motivo.
 - **Se non c'è nulla di pertinente, il modello non si chiama.** Una domanda senza
   riscontri nel corpus produce `no-match` e **zero** chiamate: pagare un modello
   per fargli dire che non lo sa, su un corpus che non lo contiene, è solo costo.
+- **Nell'E2E sono controllati solo catalogo e audio (X8).** Un test end-to-end che
+  dipende da una stazione pubblica è un test che fallisce per motivi che non sono
+  il codice: il catalogo risponde con una stazione fissa e il trasporto audio con
+  un WAV di silenzio generato nel test. Tutto il resto — autenticazione, preferiti,
+  persistenza, ricerca, player — è reale, ed è quello che il test deve misurare.
+- **L'E2E ha un workflow separato, non è un secondo job del CI.** Avvia quattro
+  container e scarica un browser: un suo rosso non deve far apparire rotto un
+  progetto i cui test veloci sono verdi. Gira sulle pull request e a mano.
+- **Un selettore ambiguo è un difetto del test, non dell'app.** `'Registrati'`
+  corrispondeva anche a "Non hai un account? Registrati", e dopo aver salvato un
+  preferito lo stesso pulsante esiste in griglia e nella sezione dedicata:
+  `exact: true` e `first()` dove serve. Li ha trovati la prima esecuzione reale,
+  non una rilettura.
 
 ## 4. Verifica automatizzata
 
@@ -150,6 +163,10 @@ del codice:
 - **Domande sulle notizie (bonus X4)**: chiusa — sezione *Domande sulle notizie
   (X4)* nel README. Limite dichiarato: il corpus viene caricato in memoria, con
   un corpus grande servirebbe una ricerca in SQL al posto del caricamento.
+- **Test end-to-end (bonus X8)**: chiusi — sezione *Test end-to-end (X8)* nel
+  README. Limite dichiarato: catalogo e audio sono controllati dal test, quindi
+  l'E2E verifica il percorso dell'utente e non l'integrazione con le fonti radio
+  esterne (che resta coperta dai test unitari e dalle verifiche dal vivo).
 - **Provider IA reale**: integrato (Gemini/OpenAI) e selezionabile con
   `SUMMARY_PROVIDER`, ma il default resta il **mock** per far partire l'app
   anche senza chiavi API.

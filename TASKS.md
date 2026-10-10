@@ -33,7 +33,7 @@ quelle del documento di consegna.
 | **D4** | Test unitari + integrazione backend, **RTL sul frontend** | `[x]` | backend **97 test in 13 file**; frontend **13 test** (`tests/SearchBar.test.tsx`, `tests/Player.test.tsx`) con `npm test` in CI |
 | **D5** | Log strutturati, `GET /api/health` con DB e Redis | `[x]` | `utils/logger.ts` (JSON in produzione), `routes/health.ts` |
 
-### Bonus — 6 completi, 0 parziali
+### Bonus — 7 completi, 0 parziali
 
 | # | Bonus | Stato | Dove sta la prova |
 | --- | --- | --- | --- |
@@ -45,7 +45,7 @@ quelle del documento di consegna.
 | X4 | Domande sulle notizie (RAG) con fonti | `[ ]` | — |
 | **X4** | Domande sulle notizie (RAG) con fonti | `[x]` | `POST /api/posts/ask`: retrieval **TF-IDF** deterministico (`newsRagService.ts`) + sintesi del modello con citazioni **filtrate** sulle fonti recuperate, `source: ai \| retrieval` dichiarato; pannello `NewsAskPanel.tsx`; 16 test backend + 4 frontend; verificato dal vivo col modello reale |
 | **X5** | Aggiornamento in tempo reale (WebSocket o SSE) | `[x]` | SSE `GET /api/posts/stream` con bus **Redis pub/sub** (`realtime/postEvents.ts`), heartbeat 25 s, `proxy_buffering off` in nginx, hook `usePostStream` in `NewsSection`; 3 test backend + 3 frontend; verificato dal vivo attraverso nginx |
-| X8 | E2E con Playwright (cerca → ascolta → preferiti) | `[ ]` | — |
+| **X8** | E2E con Playwright (cerca → ascolta → preferiti) | `[x]` | `frontend/e2e/cerca-ascolta-preferiti.spec.ts`: flusso completo sulla **stack reale** (`docker compose`), con catalogo e trasporto audio controllati; `npm run test:e2e` (~5 s, stabile su due esecuzioni); workflow separato `.github/workflows/e2e.yml` |
 
 ## 2. Piano dei bonus (deciso il 10/10, consegna 17/10)
 
@@ -62,7 +62,7 @@ o è **dichiarato non svolto con il motivo** — mai lasciato a metà.
 | 3 | **X3** — ricerca in linguaggio naturale | 2-3 h | `[x]` fatto |
 | 4 | **X2** — deploy con URL pubblico | 3-6 h | `[ ]` |
 | 5 | **X4** — domande sulle notizie (RAG) con fonti | 4 h | `[x]` fatto |
-| 6 | **X8** — E2E Playwright (cerca → ascolta → preferiti) | 4 h | `[ ]` |
+| 6 | **X8** — E2E Playwright (cerca → ascolta → preferiti) | 4 h | `[x]` fatto |
 
 X2 e X8 per ultimi con "revert policy": se non reggono, si dichiarano non svolti e
 si passa oltre, senza bruciare ore. Fra un bonus e l'altro va lasciato il tempo

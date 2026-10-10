@@ -29,8 +29,9 @@ Il dettaglio per singolo requisito, con il file e i test che lo coprono, sta in
 | **X3** | Ricerca in linguaggio naturale | `[x]` | `POST /api/radios/search` (`backend/src/services/naturalSearchService.ts` + `modelClient.ts`): modello con risposta JSON validata da Zod e fallback a regole deterministiche (paesi + catene di tag delle pill); quota dedicata `nl-search`; 19 test backend e 4 frontend; README § *Ricerca in linguaggio naturale (X3)* |
 | **X5** | Aggiornamento in tempo reale (SSE) | `[x]` | `GET /api/posts/stream` + bus su **Redis pub/sub** (`backend/src/realtime/postEvents.ts`), `location` dedicata con `proxy_buffering off` in `frontend/nginx.conf`, hook `usePostStream` agganciato a `NewsSection`; 3 test backend e 3 frontend; README § *Notizie in tempo reale (X5)* |
 | **X4** | Domande sulle notizie (RAG) con fonti | `[x]` | `POST /api/posts/ask` (`backend/src/services/newsRagService.ts`): retrieval **TF-IDF** deterministico + sintesi del modello con citazioni **filtrate** sulle fonti recuperate; pannello `NewsAskPanel.tsx`; 16 test backend e 4 frontend; README § *Domande sulle notizie (X4)* |
+| **X8** | E2E con Playwright (cerca → ascolta → preferiti) | `[x]` | `frontend/e2e/cerca-ascolta-preferiti.spec.ts`: flusso completo sulla **stack reale** (`docker compose`) con catalogo e audio controllati — `npm run test:e2e`, ~5 s, stabile su due esecuzioni di fila; workflow separato `.github/workflows/e2e.yml`; README § *Test end-to-end (X8)* |
 
-**Perché questi sei.** X1 perché la CI è la prova che i test passano su una
+**Perché questi sette.** X1 perché la CI è la prova che i test passano su una
 macchina diversa dalla mia, e non solo sulla mia; X7 perché rende l'app usabile
 da telefono come un'app vera — installazione, tema, condivisione — e tocca
 accessibilità e UX, non solo funzionalità; X6 perché è l'unico che cambia la
@@ -38,12 +39,14 @@ accessibilità e UX, non solo funzionalità; X6 perché è l'unico che cambia la
 brevi ma rinnovabili, con il logout che finalmente ha un effetto sul server; X3
 perché cambia il **modo** di cercare: dalla parola esatta all'intenzione; X5
 perché toglie il ritardo: le notizie arrivano quando il backend le trova; X4
-perché aggiunge il "chiedi invece di scorrere", con le fonti a garanzia.
+perché aggiunge il "chiedi invece di scorrere", con le fonti a garanzia; X8 perché
+verifica il percorso della traccia **come lo vede un utente**, non come lo vedono
+i test unitari.
 
-Restano X2 (deploy) e X8 (E2E), valutati in [`TASKS.md`](./TASKS.md) con il motivo
-della scelta: il primo dipende da un servizio esterno, il secondo è un test che
-può diventare instabile, e in un progetto con 159 test automatici verdi non
-aggiunge la garanzia che già non ci sia.
+**Resta X2 (deploy con URL pubblico)**, valutato in [`TASKS.md`](./TASKS.md): è
+l'unico bonus il cui esito non dipende solo da me — richiede un servizio esterno e
+un URL che resti vivo almeno fino alla consegna. Se non regge si dichiara non
+svolto con il motivo, invece di consegnare un link rotto.
 
 ## Struttura
 
@@ -860,6 +863,47 @@ rispondere, e non si paga una chiamata per scoprirlo.
   (ricerca naturale).
 - 16 test backend (retrieval puro su corpus fisso, orchestrazione con modello
   iniettato, validazione della rotta) + 4 frontend sul pannello.
+
+## Test end-to-end (X8)
+
+`frontend/e2e/` contiene un test Playwright che percorre il flusso della traccia —
+**cerca → ascolta → preferiti** — contro la **stack reale** (`docker compose up`:
+nginx, backend, Postgres, Redis), non contro un dev server.
+
+```bash
+docker compose up -d --wait   # la stack deve essere su
+cd frontend
+npm run test:e2e              # oppure: npx playwright test
+```
+
+Il test registra un account, fa login, cerca «jazz», avvia la riproduzione, mette
+la stazione nei preferiti e **ricarica la pagina** verificando che il preferito
+ci sia ancora — cioè che sia salvato sul server, non solo nello stato di React.
+
+Cosa è reale e cosa è controllato (la distinzione è il punto):
+
+| Reale | Controllato, per non dipendere dal mondo esterno |
+| --- | --- |
+| nginx, backend, Postgres, Redis, autenticazione (bcrypt + JWT), preferiti e loro persistenza, ricerca, player | il **catalogo radio** (una stazione fissa) e il **trasporto audio** (un WAV di silenzio generato nel test) |
+
+Un E2E che si rompe perché una stazione pubblica è offline non sta misurando il
+nostro codice, sta misurando internet. L'audio è un WAV di silenzio generato al
+volo, così il player arriva davvero allo stato "in onda" e il test verifica anche
+che il media element **non sia in pausa**: l'ascolto è reale, non un'etichetta.
+
+Il workflow **`e2e.yml` è separato** dal CI principale: l'E2E avvia quattro
+container e scarica un browser, quindi è più lento e più esposto, e un suo rosso
+non deve far apparire rotto un progetto i cui test veloci sono verdi. Gira sulle
+pull request e a mano — non sulle push — così `main` conserva un solo check di
+riferimento; in caso di fallimento carica traccia e screenshot come artefatto.
+
+**Quello che il primo giro ha trovato** (ed è il motivo per cui si scrivono gli
+E2E): i selettori `'Accedi'` e `'Registrati'` corrispondevano **due volte** — al
+pulsante di invio e alla voce "Non hai un account? Registrati" — e dopo aver messo
+una stazione nei preferiti lo stesso pulsante esiste in due punti (griglia e
+sezione preferiti). Erano ambiguità del test, non difetti dell'app, ma sarebbero
+rimaste invisibili senza un'esecuzione reale. Ora i selettori sono esatti e il
+test gira due volte di fila in **4,7 s** e **4,9 s**.
 
 ## Limiti noti
 

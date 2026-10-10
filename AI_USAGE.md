@@ -177,11 +177,14 @@ del codice:
   README. Limite dichiarato: catalogo e audio sono controllati dal test, quindi
   l'E2E verifica il percorso dell'utente e non l'integrazione con le fonti radio
   esterne (che resta coperta dai test unitari e dalle verifiche dal vivo).
-- **Deploy pubblico (bonus X2)**: **parziale e dichiarato tale**. La configurazione
-  è pronta e provata in locale (proxy a template, `TRUST_PROXY`, `render.yaml`,
-  `DEPLOY.md`), ma il deploy non è stato eseguito: creare l'account richiede email
-  e, su alcune piattaforme, carta. Un X2 senza URL verificato non è X2, quindi la
-  riga resta `[~]` in `TASKS.md`.
+- **Deploy pubblico (bonus X2)**: **svolto** — <https://radiohub-frontend.onrender.com>
+  — e verificato sull'URL (health, notizie, catalogo, SSE, spec, X3 e X4 col modello).
+  Tre lezioni che valgono più del bonus: (1) la **rete privata fra servizi non è
+  scontata**, quindi il proxy punta all'URL pubblico del backend; (2) `envsubst`
+  **non valida**, quindi un controllo normalizza le variabili e si ferma con un
+  messaggio utile; (3) il **bit di esecuzione si perde** passando da un clone
+  Windows, e l'entrypoint di nginx salta in silenzio i file non eseguibili: il
+  `chmod +x` sta nel Dockerfile, non nel repository.
 - **Provider IA reale**: integrato (Gemini/OpenAI) e selezionabile con
   `SUMMARY_PROVIDER`, ma il default resta il **mock** per far partire l'app
   anche senza chiavi API.

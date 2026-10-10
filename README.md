@@ -30,7 +30,7 @@ Il dettaglio per singolo requisito, con il file e i test che lo coprono, sta in
 | **X5** | Aggiornamento in tempo reale (SSE) | `[x]` | `GET /api/posts/stream` + bus su **Redis pub/sub** (`backend/src/realtime/postEvents.ts`), `location` dedicata con `proxy_buffering off` in `frontend/nginx.conf.template`, hook `usePostStream` agganciato a `NewsSection`; 3 test backend e 3 frontend; README § *Notizie in tempo reale (X5)* |
 | **X4** | Domande sulle notizie (RAG) con fonti | `[x]` | `POST /api/posts/ask` (`backend/src/services/newsRagService.ts`): retrieval **TF-IDF** deterministico + sintesi del modello con citazioni **filtrate** sulle fonti recuperate; pannello `NewsAskPanel.tsx`; 16 test backend e 4 frontend; README § *Domande sulle notizie (X4)* |
 | **X8** | E2E con Playwright (cerca → ascolta → preferiti) | `[x]` | `frontend/e2e/cerca-ascolta-preferiti.spec.ts`: flusso completo sulla **stack reale** (`docker compose`) con catalogo e audio controllati — `npm run test:e2e`, ~5 s, stabile su due esecuzioni di fila; workflow separato `.github/workflows/e2e.yml`; README § *Test end-to-end (X8)* |
-| **X2** | Deploy su un cloud con URL pubblico | `[~]` | configurazione pronta e **provata in locale**: proxy nginx a *template* (`frontend/nginx.conf.template` + `BACKEND_HOST`/`BACKEND_PORT`), `TRUST_PROXY` configurabile, `render.yaml` e [`DEPLOY.md`](./DEPLOY.md) con passi e verifiche. **Manca l'URL pubblico**: creare l'account è un passo umano (~10 minuti, serve la tua email) |
+| **X2** | Deploy su un cloud con URL pubblico | `[x]` | **<https://radiohub-frontend.onrender.com>** — Render: frontend + backend + PostgreSQL + Redis. Proxy nginx a template verso l'**URL pubblico** del backend (schema configurabile), variabili normalizzate da `docker-entrypoint.d/10-backend-config.envsh`. Verificato dal vivo: health, 11 notizie dal feed, catalogo radio, **SSE attraverso l'edge HTTPS**, 20 path / 24 operation, X3 e X4 col modello reale. Guida e limiti in [`DEPLOY.md`](./DEPLOY.md) |
 
 **Perché questi sette.** X1 perché la CI è la prova che i test passano su una
 macchina diversa dalla mia, e non solo sulla mia; X7 perché rende l'app usabile
@@ -44,11 +44,12 @@ perché aggiunge il "chiedi invece di scorrere", con le fonti a garanzia; X8 per
 verifica il percorso della traccia **come lo vede un utente**, non come lo vedono
 i test unitari.
 
-**X2 (deploy) è pronto ma non svolto**: la configurazione è fatta e provata in
-locale, e la guida passo-passo è in [`DEPLOY.md`](./DEPLOY.md) — ma il bonus non è
-svolto finché non esiste un **URL pubblico verificato**, e quell'ultimo passo
-richiede un account (quindi è umano, non di codice). Quando l'URL esiste lo
-verifico e aggiorno questa riga: preferisco un `[~]` onesto a un link rotto.
+**URL pubblico**: <https://radiohub-frontend.onrender.com> — il deploy è su Render
+(frontend, backend, PostgreSQL, Redis) e le verifiche fatte **sull'URL** sono in
+[`DEPLOY.md`](./DEPLOY.md). Due cose da sapere sul piano free, perché non sembrino
+difetti: i servizi **vanno in pausa dopo 15 minuti di inattività**, quindi la prima
+richiesta può richiedere ~50 secondi (dalla seconda è immediata); il database free
+scade il **9/11/2026** (`DEPLOY.md` spiega come rifare il deploy).
 
 ## Struttura
 
@@ -945,9 +946,22 @@ e, se il valore è irrecuperabile, si ferma con un messaggio che dice cosa fare.
 Provato in locale: con l'URL completo incollato il container proxa davvero verso il
 backend su Render e `/api/health` risponde `200`.
 
-**Stato**: `[~]`. Il deploy in sé non è stato eseguito perché creare l'account
-richiede email e (su alcune piattaforme) carta. Un bonus X2 senza URL non è X2,
-quindi la riga resta parziale finché l'URL non esiste e non è verificato.
+**Stato**: `[x]`, con URL pubblico verificato: **<https://radiohub-frontend.onrender.com>**.
+
+| Verifica sull'URL pubblico | Esito |
+| --- | --- |
+| `GET /api/health` | ✓ `{"status":"ok"}` 200, attraverso il proxy |
+| `GET /api/posts` | ✓ 11 notizie sincronizzate dal feed all'avvio |
+| `GET /api/radios?limit=3` | ✓ stazioni reali servite dall'IP del cloud |
+| `GET /api/posts/stream` (SSE) | ✓ `event: ready` in pochi secondi, attraverso Cloudflare + Render + nginx: nessun buffering in tutta la catena |
+| `GET /api/openapi.json` | ✓ 20 path / 24 operation, incluse `radios/search`, `posts/stream`, `posts/ask` → il backend deployato è l'ultimo |
+| `POST /api/radios/search` (X3) | ✓ `source=ai`, `provider=gemini`, `tags=jazz`, `IT` |
+| `POST /api/posts/ask` (X4) | ✓ `source=ai`, 3 fonti recuperate, 2 citate, risposta sugli articoli reali |
+
+**Da sapere sul piano free**: i servizi vanno in pausa dopo 15 minuti di
+inattività → la prima richiesta può richiedere ~50 secondi e dalla seconda è
+immediata; il database free **scade il 9/11/2026**. Per rifare il deploy dopo la
+scadenza: sezione *Strada manuale* qui sopra, più il database esterno (Neon).
 
 ## Limiti noti
 

@@ -11,11 +11,17 @@ RUN npm run build
 # ---------- runtime stage ----------
 FROM nginx:1.27-alpine AS runtime
 
-# X2 — controllo delle variabili del proxy (BACKEND_SCHEME/HOST/PORT): l'entrypoint
-# di `nginx:alpine` esegue i file di /docker-entrypoint.d/ prima di `envsubst`,
-# quindi un valore scritto male produce un messaggio comprensibile invece di
-# `[emerg] invalid port in upstream`.
+# X2 — controllo e normalizzazione delle variabili del proxy
+# (BACKEND_SCHEME/HOST/PORT): l'entrypoint di nginx esegue i file di
+# /docker-entrypoint.d/ **prima** di `envsubst`.
+#
+# `chmod +x` è necessario, non cosmetico: l'entrypoint **ignora con un warning** i
+# file non eseguibili, e un clone su Windows non conserva il bit di esecuzione
+# (nel primo deploy reale il file è arrivato in 0644 ed è stato saltato: nginx
+# è partito con il valore grezzo). Farlo qui rende il comportamento indipendente
+# da chi costruisce l'immagine.
 COPY docker-entrypoint.d/ /docker-entrypoint.d/
+RUN chmod +x /docker-entrypoint.d/*
 
 # X2 — il file è un **template**: l'entrypoint di `nginx:alpine` esegue
 # `envsubst` su `/etc/nginx/templates/*.template` e scrive il risultato in

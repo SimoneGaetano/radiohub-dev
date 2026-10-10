@@ -33,14 +33,14 @@ quelle del documento di consegna.
 | **D4** | Test unitari + integrazione backend, **RTL sul frontend** | `[x]` | backend **97 test in 13 file**; frontend **13 test** (`tests/SearchBar.test.tsx`, `tests/Player.test.tsx`) con `npm test` in CI |
 | **D5** | Log strutturati, `GET /api/health` con DB e Redis | `[x]` | `utils/logger.ts` (JSON in produzione), `routes/health.ts` |
 
-### Bonus — 7 completi, 1 parziale
+### Bonus — 8 completi, 0 parziali
 
 | # | Bonus | Stato | Dove sta la prova |
 | --- | --- | --- | --- |
 | **X1** | Pipeline CI con lint, test e build | `[x]` | `.github/workflows/ci.yml`: lint + format:check + typecheck + 97 test + build, con Postgres e Redis reali |
 | **X7** | PWA installabile, tema chiaro/scuro, condivisione radio | `[x]` | `manifest.json`, `sw.js`, `utils/{theme,installPrompt}.ts`, copia link in `RadioCard` |
 | **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), rate limiting montato in `app.ts` (health e docs esclusi, `trust proxy`), refresh token monouso in `authService.ts` + `POST /api/auth/refresh`/`logout`, rinnovo trasparente in `frontend/src/services/api.ts`, 13 test |
-| X2 | Deploy su un cloud con URL pubblico | `[~]` | Config pronta e provata in locale: `frontend/nginx.conf.template` con `BACKEND_HOST`/`BACKEND_PORT` (envsubst), `TRUST_PROXY` configurabile, `render.yaml`, `DEPLOY.md` con verifiche. **Manca l'URL**: serve un account (~10 min) |
+| **X2** | Deploy su un cloud con URL pubblico | `[x]` | **<https://radiohub-frontend.onrender.com>** — Render (frontend, backend, Postgres, Redis). Verificato sull'URL: health, 11 notizie, catalogo radio, SSE attraverso l'edge, 20 path/24 operation, X3 e X4 col modello reale. Piano free: pausa dopo 15 min di inattività, database in scadenza il 9/11/2026 |
 | **X3** | Ricerca in linguaggio naturale | `[x]` | `POST /api/radios/search`: `naturalSearchService.ts` (regole deterministiche: paesi + catene di tag delle pill) + `modelClient.ts` (modello, JSON validato con Zod, passaggio alle regole dichiarato in `fallbackReason`), quota `nl-search`, chip dei filtri in `SearchBar.tsx`; 19 test backend + 4 frontend |
 | **X4** | Domande sulle notizie (RAG) con fonti | `[x]` | `POST /api/posts/ask`: retrieval **TF-IDF** deterministico (`newsRagService.ts`) + sintesi del modello con citazioni **filtrate** sulle fonti recuperate, `source: ai \| retrieval` dichiarato; pannello `NewsAskPanel.tsx`; 16 test backend + 4 frontend; verificato dal vivo col modello reale |
 | **X5** | Aggiornamento in tempo reale (WebSocket o SSE) | `[x]` | SSE `GET /api/posts/stream` con bus **Redis pub/sub** (`realtime/postEvents.ts`), heartbeat 25 s, `proxy_buffering off` in nginx, hook `usePostStream` in `NewsSection`; 3 test backend + 3 frontend; verificato dal vivo attraverso nginx |
@@ -59,7 +59,7 @@ o è **dichiarato non svolto con il motivo** — mai lasciato a metà.
 | 1 | **X6** — rate limiting e refresh token (2 dei 4 pezzi già fatti) | 3-4 h | `[x]` fatto |
 | 2 | **X5** — nuovi post in tempo reale (SSE) | 3 h | `[x]` fatto |
 | 3 | **X3** — ricerca in linguaggio naturale | 2-3 h | `[x]` fatto |
-| 4 | **X2** — deploy con URL pubblico | 3-6 h | `[~]` config pronta, URL da attivare |
+| 4 | **X2** — deploy con URL pubblico | 3-6 h | `[x]` fatto — <https://radiohub-frontend.onrender.com> |
 | 5 | **X4** — domande sulle notizie (RAG) con fonti | 4 h | `[x]` fatto |
 | 6 | **X8** — E2E Playwright (cerca → ascolta → preferiti) | 4 h | `[x]` fatto |
 

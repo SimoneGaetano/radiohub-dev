@@ -156,7 +156,7 @@ la pagina e verifica che il preferito ci sia ancora.
 - Il backend applica migrazioni e seed all'avvio e sincronizza il feed: il primo
   deploy riempie il database da solo.
 
-## Cosa è stato provato senza account
+## Cosa è stato verificato
 
 | Verifica | Esito |
 | --- | --- |
@@ -166,6 +166,9 @@ la pagina e verifica che il preferito ci sia ancora.
 | Il file compose resta valido con le nuove variabili | ✓ `docker compose config -q` |
 | `TRUST_PROXY` letto dall'ambiente, con default sicuro (1) | ✓ validato da `env.ts`; il caso `X-Forwarded-For` è già coperto dai test del rate limiting |
 | `docker compose up` locale invariato | ✓ stack healthy, `/api/health` e `/api/posts` 200 via nginx |
+| **Il deploy vero, sull'URL pubblico** | ✓ `https://radiohub-frontend.onrender.com`: `{"status":"ok"}`, 11 notizie dal feed, catalogo radio reale, **SSE attraverso l'edge HTTPS** (`event: ready` in pochi secondi), 20 path / 24 operation, X3 (`source=ai`, `tags=jazz`, `IT`) e X4 (3 fonti, 2 citate, risposta reale) |
+| Un container locale che proxa verso il backend su Render | ✓ `BACKEND_HOST` con l'URL completo → normalizzato → `/api/health` 200 dal cloud |
 
-Quello che **non** posso verificare senza account: il deploy vero, l'edge HTTPS
-della piattaforma e la tenuta dell'URL nel tempo.
+Resta non verificabile da qui: la **tenuta nel tempo** dell'URL. Piano free: i
+servizi vanno in pausa dopo 15 minuti di inattività e il database scade il
+**9/11/2026**.

@@ -80,6 +80,21 @@ potrebbe chiedersene il motivo.
   jazz italiana per rilassarmi" deve produrre `tags: jazz` + `IT`, non una query
   di nome con "per rilassarmi": quest'ultima azzererebbe i risultati. Il testo
   libero resta `q` solo quando non c'è nessun filtro forte.
+- **SSE e non WebSocket per il tempo reale (X5).** Il flusso è a senso unico: con
+  SSE il browser si riconnette **da solo** rispettando il `retry` annunciato,
+  quindi non c'è codice di riconnessione da scrivere (e da sbagliare). Un
+  WebSocket avrebbe richiesto una libreria e la gestione manuale del backoff.
+- **L'annuncio viaggia su Redis pub/sub, non in memoria.** Con più istanze del
+  backend il client SSE può essere collegato a un'istanza diversa da quella che
+  ha sincronizzato: una lista in memoria funzionerebbe in sviluppo e fallirebbe
+  in produzione, che è il tipo di difetto peggiore. Il subscriber usa una
+  connessione dedicata (`duplicate()`), perché in `subscribe` una connessione si
+  blocca sul canale.
+- **Dietro un proxy l'SSE richiede due configurazioni, non zero.**
+  `X-Accel-Buffering: no` nel backend e `proxy_buffering off` in nginx: senza,
+  gli eventi restano nel buffer del proxy e non arrivano mai. Non è una teoria:
+  è stato verificato con `curl -N` attraverso nginx, con l'evento pubblicato a
+  mano su Redis.
 
 ## 4. Verifica automatizzata
 
@@ -117,6 +132,9 @@ del codice:
 - **Ricerca in linguaggio naturale (bonus X3)**: chiusa — sezione *Ricerca in
   linguaggio naturale (X3)* nel README. La duplicazione fra `aiService.ts` e
   `modelClient.ts` è dichiarata e motivata lì.
+- **Notizie in tempo reale (bonus X5)**: chiusa — sezione *Notizie in tempo reale
+  (X5)* nel README. Limiti dichiarati: il flusso (best effort) tace se Redis è
+  giù e non c'è coda per chi era disconnesso.
 - **Provider IA reale**: integrato (Gemini/OpenAI) e selezionabile con
   `SUMMARY_PROVIDER`, ma il default resta il **mock** per far partire l'app
   anche senza chiavi API.

@@ -27,17 +27,20 @@ Il dettaglio per singolo requisito, con il file e i test che lo coprono, sta in
 | **X7** | PWA installabile, tema chiaro/scuro, condivisione radio | `[x]` | `frontend/public/manifest.json`, `frontend/public/sw.js`, `frontend/src/utils/{theme,installPrompt}.ts`, copia del link in `RadioCard` |
 | **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), `POST /api/auth/refresh` e `/api/auth/logout` (`authService.ts`), rinnovo trasparente in `frontend/src/services/api.ts`; 13 test (`tests/rateLimit.test.ts`, `tests/refreshToken.test.ts`) |
 | **X3** | Ricerca in linguaggio naturale | `[x]` | `POST /api/radios/search` (`backend/src/services/naturalSearchService.ts` + `modelClient.ts`): modello con risposta JSON validata da Zod e fallback a regole deterministiche (paesi + catene di tag delle pill); quota dedicata `nl-search`; 19 test backend e 4 frontend; README § *Ricerca in linguaggio naturale (X3)* |
+| **X5** | Aggiornamento in tempo reale (SSE) | `[x]` | `GET /api/posts/stream` + bus su **Redis pub/sub** (`backend/src/realtime/postEvents.ts`), `location` dedicata con `proxy_buffering off` in `frontend/nginx.conf`, hook `usePostStream` agganciato a `NewsSection`; 3 test backend e 3 frontend; README § *Notizie in tempo reale (X5)* |
 
-**Perché questi quattro.** X1 perché la CI è la prova che i test passano su una
+**Perché questi cinque.** X1 perché la CI è la prova che i test passano su una
 macchina diversa dalla mia, e non solo sulla mia; X7 perché rende l'app usabile
 da telefono come un'app vera — installazione, tema, condivisione — e tocca
 accessibilità e UX, non solo funzionalità; X6 perché è l'unico che cambia la
 **postura** dell'app, non le sue funzioni: quote per non farsi abusare e sessioni
 brevi ma rinnovabili, con il logout che finalmente ha un effetto sul server; X3
 perché è l'unico che cambia il **modo** di cercare: dalla parola esatta
-all'intenzione, con l'interpretazione sempre visibile e correggibile.
+all'intenzione, con l'interpretazione sempre visibile e correggibile; X5 perché
+toglie il ritardo: le notizie arrivano quando il backend le trova, non al giro
+successivo.
 
-Gli altri bonus (X2 deploy, X4 RAG sulle notizie, X5 SSE, X8 E2E) sono valutati in
+Gli altri bonus (X2 deploy, X4 RAG sulle notizie, X8 E2E) sono valutati in
 [`TASKS.md`](./TASKS.md), con il motivo della scelta.
 
 ## Struttura
@@ -728,6 +731,79 @@ Dettagli che contano:
   chiamata al provider invece di usare `modelClient`. È una duplicazione nota:
   unificarla tocca un percorso chiuso e testato senza guadagno funzionale, e
   `modelClient` è nato anche per assorbirla in un secondo momento.
+
+## Notizie in tempo reale (X5)
+
+`GET /api/posts/stream` è un flusso **SSE**: all'apertura annuncia il `retry`
+(10 s) e manda un evento `ready`; ogni sincronizzazione che inserisce o aggiorna
+post pubblica poi un evento `posts` con `{ created, updated, at }`. Il frontend si
+riallinea subito e avvisa il lettore, invece di attendere il polling di sicurezza
+(5 minuti), che resta in piedi come rete di sicurezza.
+
+```bash
+curl -N http://localhost:8080/api/posts/stream
+# retry: 10000
+#
+# event: ready
+# data: {"clients":1}
+# (a ogni sincronizzazione con novità)
+# event: posts
+# data: {"created":2,"updated":0,"at":"2026-10-10T12:00:00.000Z"}
+```
+
+**SSE e non WebSocket**: il flusso è a senso unico (il server annuncia, il client
+non invia nulla), è HTTP puro — nessuna libreria, nessun upgrade di protocollo da
+configurare nel proxy — e nel browser la **riconnessione è automatica**, guidata
+dal `retry` annunciato. Con un WebSocket avrei dovuto scrivere e testare a mano la
+riconnessione.
+
+**La distribuzione passa da Redis pub/sub** (`src/realtime/postEvents.ts`), non da
+un array in memoria: il backend può girare su più istanze — è la ragione per cui
+anche la cache di B3 sta in Redis — e un client collegato all'istanza A deve
+ricevere un evento prodotto dall'istanza B. Il subscriber usa una connessione
+dedicata (`redis.duplicate()`): in `subscribe` una connessione si blocca sul canale
+e non può più servire la cache né i contatori del rate limiting.
+
+Dettagli che contano, o l'SSE non funziona dietro un proxy:
+
+- **`X-Accel-Buffering: no` + `proxy_buffering off`**: senza questi due, nginx
+  accumula la risposta in un buffer e gli eventi arrivano solo alla chiusura della
+  connessione, cioè mai. In `frontend/nginx.conf` c'è una `location
+  /api/posts/stream` dedicata (prefisso più specifico, quindi vince sul `/api/`
+  generico) con `proxy_read_timeout 1h`;
+- **heartbeat ogni 25 s**: un **commento** SSE (`: ping`), che non genera eventi
+  ma tiene la connessione viva oltre il `proxy_read_timeout` del proxy;
+- **l'evento si pubblica solo se qualcosa è cambiato** (`created > 0 || updated > 0`):
+  altrimenti ogni sync — anche senza novità — riallineerebbe la lista di tutti i
+  client cinque volte l'ora;
+- **il flusso è pubblico come `GET /api/posts`**: gli articoli si leggono anche da
+  ospiti, ed `EventSource` non sa inviare header di autenticazione;
+- **un socket morto viene tolto dal registro** alla prima scrittura fallita e alla
+  chiusura della richiesta (`req.on('close')`), così non resta lì a fallire a ogni
+  evento.
+
+**Verifica dal vivo**, nginx in mezzo e `redis-cli PUBLISH` al posto del job:
+
+```
+$ curl -N http://localhost:8080/api/posts/stream
+retry: 10000
+
+event: ready
+data: {"clients":1}
+
+event: posts
+data: {"created":2,"updated":0,"at":"2026-10-10T12:00:00.000Z"}
+```
+
+e nei log del backend: `Post event delivered {"created":2,"updated":0,"clients":1}`.
+(La stessa catena è già scattata da sola all'avvio, con `updated:10` dalla
+sincronizzazione iniziale del feed.)
+
+**Limiti dichiarati**: se Redis è giù il flusso resta muto — l'evento non viaggia
+più fra le istanze — ma l'app continua, perché la lista si riallinea con il
+polling e il pubblicatore non lancia (una sincronizzazione riuscita non deve
+fallire per colpa dell'annuncio). E il flusso è "best effort": nessuna garanzia di
+consegna, nessuna coda per chi era disconnesso.
 
 ## Limiti noti
 

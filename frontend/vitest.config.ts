@@ -1,5 +1,5 @@
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 /**
  * Test del frontend (D4).
@@ -15,5 +15,12 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
+    /**
+     * `e2e/` è escluso: sono test **Playwright** (`*.spec.ts`), che Vitest
+     * raccoglierebbe per via del nome ma non può eseguire — richiedono un browser
+     * e la stack avviata. L'esclusione è esplicita perché la forma del nome è la
+     * stessa dei test di React Testing Library.
+     */
+    exclude: [...configDefaults.exclude, 'e2e/**'],
   },
 });

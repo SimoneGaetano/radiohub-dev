@@ -3,3 +3,6 @@ dist
 package-lock.json
 shot-*.png
 tmp-*.mjs
+# X8: artefatti di Playwright (report e tracce), non sono codice
+test-results
+playwright-report

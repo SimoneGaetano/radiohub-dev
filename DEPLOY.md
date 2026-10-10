@@ -117,6 +117,12 @@ la pagina e verifica che il preferito ci sia ancora.
    `BACKEND_SCHEME=https`, `BACKEND_HOST=<backend>.onrender.com` (senza `https://`),
    `BACKEND_PORT=443`. È anche il motivo per cui lo *scheme* è configurabile: in
    locale il proxy resta su `http://backend:4000`, senza cambiare l'immagine.
+
+   Se invece il messaggio è `invalid port in upstream "://onrender.com:443"` o
+   `host not found`, il container ora **te lo dice in italiano** prima di partire:
+   `docker-entrypoint.d/10-check-backend.sh` valida le tre variabili e indica quale
+   campo correggere (esempio incluso). `envsubst` sostituisce senza controllare,
+   quindi senza quel controllo si vedrebbe solo l'errore di nginx.
 1. **Il frontend risponde ma `/api/*` dà `502`** → `BACKEND_HOST`/`BACKEND_PORT`
    (o `BACKEND_SCHEME`) sbagliati: il template di nginx punta a un host che non
    esiste o al protocollo sbagliato.

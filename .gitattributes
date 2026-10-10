@@ -1,0 +1,9 @@
+# Fine riga che **devono** restare LF anche su un checkout Windows: dentro un
+# container Linux un `\r` finale fa fallire gli script di shell (`sh: syntax
+# error`) e può rompere le direttive dei Dockerfile. Con `core.autocrlf=true`
+# (impostazione comune su Windows) git altrimenti li converte in CRLF, e il
+# `docker compose up` in locale smetterebbe di funzionare senza un motivo visibile.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

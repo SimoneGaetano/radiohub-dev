@@ -84,6 +84,7 @@ services:
       RATE_LIMIT_AUTH_WINDOW_SECONDS: ${RATE_LIMIT_AUTH_WINDOW_SECONDS:-900}
       RATE_LIMIT_AI_MAX: ${RATE_LIMIT_AI_MAX:-20}
       RATE_LIMIT_AI_WINDOW_SECONDS: ${RATE_LIMIT_AI_WINDOW_SECONDS:-300}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
     ports:
       - '${BACKEND_PORT:-4000}:4000'
     depends_on:
@@ -111,6 +112,11 @@ services:
       context: ./frontend
     container_name: radiohub-frontend
     restart: unless-stopped
+    environment:
+      # X2 — il reverse proxy di nginx (template) punta qui: in locale è il nome
+      # del servizio, su un cloud è l'host interno del backend. Stesso file.
+      BACKEND_HOST: backend
+      BACKEND_PORT: "4000"
     ports:
       - '${FRONTEND_PORT:-8080}:80'
     depends_on:

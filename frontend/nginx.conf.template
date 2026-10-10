@@ -1,3 +1,15 @@
+# RadioHub — configurazione nginx del frontend (X2).
+#
+# È un **template**, non un file di configurazione: l'immagine `nginx:alpine`
+# esegue `envsubst` all'avvio sui file in `/etc/nginx/templates/*.template` e
+# scrive il risultato in `/etc/nginx/conf.d/`. Serve a non avere l'indirizzo del
+# backend **dentro** l'immagine: in locale è `backend:4000` (il nome del servizio
+# in Docker), su un cloud è l'hostname interno del servizio backend. Senza questo,
+# la stessa immagine funzionerebbe solo in un posto.
+#
+# La sostituzione riguarda **solo** le variabili d'ambiente definite
+# (`BACKEND_HOST`, `BACKEND_PORT`): `$host`, `$uri`, `$remote_addr` restano quelli
+# di nginx, perché `envsubst` viene invocato con l'elenco delle variabili esistenti.
 server {
     listen 80;
     server_name _;
@@ -12,7 +24,7 @@ server {
     # ogni 25 s). `Connection ''` mantiene la connessione upstream riutilizzabile
     # invece di degradarla a `close`.
     location /api/posts/stream {
-        proxy_pass http://backend:4000;
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -26,7 +38,7 @@ server {
 
     # API -> backend container (keeps the browser on a single origin, no CORS)
     location /api/ {
-        proxy_pass http://backend:4000;
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

@@ -233,3 +233,26 @@ export async function callModel(
 
   return { text: outcome.text, provider, reason: outcome.reason };
 }
+
+/** Firma della chiamata al modello: iniettabile nei test (nessuna rete). */
+export type ModelCallFn = typeof callModel;
+
+/**
+ * Estrae l'oggetto JSON dalla risposta del modello, che a volte lo incapsula in
+ * un blocco di codice o lo accompagna con una frase. Restituisce `null` se non
+ * c'è un JSON leggibile: chi chiama passa allora alla propria strada offline.
+ */
+export function extractJsonObject(text: string): unknown | null {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+
+  if (start === -1 || end <= start) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}

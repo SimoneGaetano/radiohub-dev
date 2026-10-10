@@ -1,5 +1,16 @@
 import { z } from 'zod';
-import { callModel, type ModelCallResult } from './modelClient';
+import {
+  callModel,
+  extractJsonObject,
+  type ModelCallFn,
+  type ModelCallResult,
+} from './modelClient';
+import {
+  normalizeForSearch,
+  sanitizeUserText,
+  USER_TEXT_CLOSE,
+  USER_TEXT_OPEN,
+} from '../utils/text';
 import { logger } from '../utils/logger';
 
 /**
@@ -45,33 +56,6 @@ export interface Interpretation {
   note: string | null;
   /** Perché si è finiti sulle regole, quando è successo. */
   fallbackReason: string | null;
-}
-
-/** Delimita il testo dell'utente nel prompt: è la difesa da prompt injection (A3). */
-const USER_TEXT_OPEN = '<<<TESTO_UTENTE';
-const USER_TEXT_CLOSE = 'TESTO_UTENTE>>>';
-
-/** Forma normalizzata su cui lavorano i dizionari: minuscolo e senza accenti. */
-function normalizeText(raw: string): string {
-  return (
-    raw
-      .toLowerCase()
-      .normalize('NFD')
-      // Rimuove i segni diacritici: "elettronica" e "elettronica" coincidono.
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-  );
-}
-
-/** Ripulisce il testo dell'utente dai marcatori dei delimitatori (prompt injection). */
-export function sanitizeUserText(raw: string): string {
-  return raw
-    .split(USER_TEXT_OPEN)
-    .join(' ')
-    .split(USER_TEXT_CLOSE)
-    .join(' ')
-    .trim();
 }
 
 /**
@@ -438,7 +422,7 @@ interface RuleParseResult {
 
 /** Normalizza, toglie le frasi vuote di senso e compatta gli spazi. */
 function prepareText(raw: string): string {
-  let text = ` ${normalizeText(sanitizeUserText(raw))} `;
+  let text = ` ${normalizeForSearch(sanitizeUserText(raw))} `;
 
   for (const phrase of STOP_PHRASES) {
     text = text.split(` ${phrase} `).join(' ');
@@ -582,25 +566,6 @@ function buildPrompt(userText: string): string {
   ].join('\n');
 }
 
-/**
- * Estrae l'oggetto JSON dal testo del modello, che a volte lo incapsula in un
- * blocco di codice. Restituisce `null` se non c'è un JSON leggibile.
- */
-export function extractJsonObject(text: string): unknown | null {
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-
-  if (start === -1 || end <= start) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return null;
-  }
-}
-
 /** Risposta del modello → filtri dell'API. `order` resta sempre valorizzato. */
 function toFilters(answer: ModelAnswer): {
   filters: NaturalSearchFilters;
@@ -635,9 +600,6 @@ function toFilters(answer: ModelAnswer): {
     },
   };
 }
-
-/** Iniezione usata dai test per sostituire la chiamata al modello. */
-export type ModelCallFn = typeof callModel;
 
 export interface InterpretOptions {
   /** Sostituisce `callModel` (nessuna rete nei test). */

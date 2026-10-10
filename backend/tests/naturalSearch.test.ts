@@ -4,12 +4,14 @@ import { createApp } from '../src/app';
 import { disconnectPrisma } from '../src/db/prisma';
 import { closeRedis } from '../src/redis/client';
 import {
-  extractJsonObject,
   interpretQuery,
   parseWithRules,
-  sanitizeUserText,
-  type ModelCallFn,
 } from '../src/services/naturalSearchService';
+import {
+  extractJsonObject,
+  type ModelCallFn,
+} from '../src/services/modelClient';
+import { sanitizeUserText } from '../src/utils/text';
 
 /**
  * X3 — ricerca in linguaggio naturale.

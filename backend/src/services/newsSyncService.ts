@@ -1,5 +1,6 @@
 import { env } from '../config/env';
 import { prisma } from '../db/prisma';
+import { publishPostEvent } from '../realtime/postEvents';
 import { errorContext, logger } from '../utils/logger';
 import { invalidatePostsCache } from './postsCache';
 
@@ -239,6 +240,17 @@ export async function syncNews(): Promise<NewsSyncResult> {
     }
 
     await invalidatePostsCache();
+    if (result.created > 0 || result.updated > 0) {
+      // X5: chi è collegato al flusso lo scopre adesso, non al prossimo giro di
+      // polling. L'evento passa da Redis pub/sub perché il backend può girare su
+      // più istanze: chi ha il client SSE può non essere l'istanza che ha
+      // sincronizzato.
+      await publishPostEvent({
+        created: result.created,
+        updated: result.updated,
+        at: new Date().toISOString(),
+      });
+    }
     logger.info('News sync completed', { ...result });
     return result;
   } finally {

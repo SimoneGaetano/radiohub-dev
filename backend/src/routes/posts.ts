@@ -11,6 +11,11 @@ import {
   writePostsCache,
 } from '../services/postsCache';
 import { errorContext, logger } from '../utils/logger';
+import {
+  addPostStreamClient,
+  connectedClients,
+  removePostStreamClient,
+} from '../realtime/postEvents';
 
 export const postsRouter = Router();
 
@@ -111,6 +116,55 @@ postsRouter.get('/posts', authenticateJWTOptional, async (req, res) => {
     logger.error('Unexpected error while listing posts', errorContext(error));
     res.status(500).json({ error: 'Internal Server Error' });
   }
+});
+
+/**
+ * Intervallo dell'heartbeat del flusso SSE. Deve restare **sotto** il
+ * `proxy_read_timeout` del proxy (60 s di default in nginx), altrimenti il proxy
+ * considera la connessione inattiva e la chiude.
+ */
+const SSE_HEARTBEAT_MS = 25_000;
+
+/**
+ * X5 — flusso di eventi (SSE) sui post nuovi.
+ *
+ * Perché SSE e non WebSocket: il flusso è a senso unico, è HTTP puro (nessuna
+ * libreria, nessun upgrade di protocollo da configurare nel proxy) e il browser
+ * si **riconnette da solo** rispettando il `retry` annunciato qui.
+ *
+ * `X-Accel-Buffering: no` (+ `proxy_buffering off` in `frontend/nginx.conf`):
+ * senza l'uno o l'altro il proxy accumula la risposta e gli eventi arrivano solo
+ * alla chiusura della connessione, cioè mai. L'heartbeat è un **commento** SSE
+ * (una riga che inizia con `:`): non genera eventi e non disturba il client, ma
+ * tiene viva la connessione.
+ */
+postsRouter.get('/posts/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  // `retry` = attesa prima della riconnessione automatica del browser; l'evento
+  // `ready` conferma al client (e a chi legge i log) che il canale è aperto.
+  res.write('retry: 10000\n\n');
+  res.write(
+    `event: ready\ndata: ${JSON.stringify({ clients: connectedClients() + 1 })}\n\n`,
+  );
+
+  addPostStreamClient(res);
+  logger.info('SSE client connected', { clients: connectedClients() });
+
+  const heartbeat = setInterval(() => {
+    res.write(': ping\n\n');
+  }, SSE_HEARTBEAT_MS);
+  heartbeat.unref();
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    removePostStreamClient(res);
+    logger.info('SSE client disconnected', { clients: connectedClients() });
+  });
 });
 
 /**

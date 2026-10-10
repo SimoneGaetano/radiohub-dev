@@ -4,6 +4,7 @@ import { closeDatabase } from './db/pool';
 import { disconnectPrisma } from './db/prisma';
 import { runNewsSyncSafely } from './services/newsSyncService';
 import { closeRedis } from './redis/client';
+import { startPostEventBus, stopPostEventBus } from './realtime/postEvents';
 import { logger } from './utils/logger';
 
 const app = createApp();
@@ -22,6 +23,9 @@ const server = app.listen(env.PORT, () => {
     void runNewsSyncSafely();
   }, env.NEWS_SYNC_INTERVAL_SECONDS * 1000);
   newsSyncTimer.unref();
+
+  // X5: apre il canale di sottoscrizione degli eventi dei post (SSE).
+  void startPostEventBus();
 });
 
 /**
@@ -40,6 +44,7 @@ function shutdown(signal: NodeJS.Signals): void {
       disconnectPrisma(),
       closeDatabase(),
       closeRedis(),
+      stopPostEventBus(),
     ]).then(() => process.exit(0));
   });
 

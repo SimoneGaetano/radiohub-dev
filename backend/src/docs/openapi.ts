@@ -412,6 +412,40 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/posts/ask': {
+      post: {
+        tags: ['Posts'],
+        operationId: 'askNews',
+        summary: 'Domanda sulle notizie con fonti (X4)',
+        description:
+          'Risponde a una domanda in italiano sul corpus delle notizie e restituisce **le fonti**: i passaggi degli articoli che hanno prodotto la risposta (`sources`) e gli `id` che il modello dichiara di aver usato (`citationIds`). Il retrieval è **lessicale (TF-IDF)**, non vettoriale: con un corpus di poche decine di articoli un indice con embedding non migliorerebbe i risultati e renderebbe il comportamento non deterministico. Le citazioni sono **filtrate** sui passaggi davvero recuperati, quindi il modello non può citare un articolo che non gli è stato fornito né inventarne l’id. Se non c’è un modello configurato, o se la risposta non è conforme allo schema, la rotta risponde comunque con i passaggi pertinenti e `source: "retrieval"`, dichiarando il motivo in `fallbackReason`.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/NewsAskRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Risposta (quando c’è) e fonti usate',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    data: { $ref: '#/components/schemas/NewsAnswer' },
+                  },
+                },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '429': { $ref: '#/components/responses/TooManyRequests' },
+        },
+      },
+    },
     '/api/posts/{id}/summary': {
       get: {
         tags: ['Summaries'],
@@ -1092,6 +1126,54 @@ export const openApiDocument = {
           created: { type: 'integer', description: 'Post inseriti' },
           updated: { type: 'integer', description: 'Post aggiornati' },
           skipped: { type: 'integer', description: 'Elementi scartati' },
+        },
+      },
+      NewsAskRequest: {
+        type: 'object',
+        required: ['question'],
+        properties: {
+          question: {
+            type: 'string',
+            minLength: 3,
+            maxLength: 300,
+            example: 'cosa si dice del festival del rock?',
+          },
+        },
+      },
+      NewsSource: {
+        type: 'object',
+        description: 'Passaggio di un articolo usato come fonte',
+        properties: {
+          postId: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          publishedAt: { type: 'string', format: 'date-time' },
+          score: { type: 'number', description: 'Rilevanza TF-IDF' },
+          excerpt: { type: 'string' },
+          matchedTerms: { type: 'array', items: { type: 'string' } },
+        },
+      },
+      NewsAnswer: {
+        type: 'object',
+        properties: {
+          question: { type: 'string' },
+          answer: {
+            type: ['string', 'null'],
+            description:
+              'Risposta del modello; `null` quando ha risposto il solo retrieval',
+          },
+          sources: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/NewsSource' },
+          },
+          citationIds: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Id citati dal modello, filtrati sulle fonti davvero recuperate',
+          },
+          source: { type: 'string', enum: ['ai', 'retrieval'] },
+          provider: { type: ['string', 'null'] },
+          fallbackReason: { type: ['string', 'null'] },
         },
       },
       NaturalSearchRequest: {

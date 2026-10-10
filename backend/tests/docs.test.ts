@@ -45,6 +45,7 @@ const DOCUMENTED_OPERATIONS: ReadonlyArray<[string, string]> = [
   ['/api/media', 'get'],
   ['/api/posts', 'get'],
   ['/api/posts/stream', 'get'],
+  ['/api/posts/ask', 'post'],
   ['/api/posts/{id}/summary', 'get'],
   ['/api/posts/{id}/summary', 'post'],
   ['/api/auth/register', 'post'],

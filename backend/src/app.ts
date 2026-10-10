@@ -1,6 +1,7 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import { env } from './config/env';
 import { healthRouter } from './routes/health';
 import { radiosRouter } from './routes/radios';
 import { authRouter } from './routes/auth';
@@ -20,15 +21,19 @@ export function createApp(): Express {
 
   app.disable('x-powered-by');
   /**
-   * X6 — dietro nginx (vedi `frontend/nginx.conf`) il peer della connessione è
-   * il container del proxy, non il browser: senza questa impostazione `req.ip`
-   * sarebbe identico per tutti i client e il rate limiting diventerebbe un'unica
-   * quota condivisa. nginx accoda l'IP reale a `X-Forwarded-For`
-   * (`proxy_add_x_forwarded_for`), quindi con **un solo** hop fidato Express
-   * legge l'ultimo valore dell'header — quello aggiunto dal proxy — e una testata
-   * falsificata dal client non sposta la chiave.
+   * X6/X2 — dietro nginx (vedi `frontend/nginx.conf.template`) il peer della
+   * connessione è il container del proxy, non il browser: senza questa
+   * impostazione `req.ip` sarebbe identico per tutti i client e il rate limiting
+   * diventerebbe un'unica quota condivisa. nginx accoda l'IP reale a
+   * `X-Forwarded-For` (`proxy_add_x_forwarded_for`), quindi con **un solo** hop
+   * fidato Express legge l'ultimo valore dell'header — quello aggiunto dal proxy —
+   * e una testata falsificata dal client non sposta la chiave.
+   *
+   * Il numero di hop è configurabile (`TRUST_PROXY`): in locale è 1, su un cloud
+   * che mette un proprio edge davanti all'app può essere 2, e sbagliarlo significa
+   * contare l'IP del proxy invece di quello del client.
    */
-  app.set('trust proxy', 1);
+  app.set('trust proxy', env.TRUST_PROXY);
   app.use(helmet());
   app.use(cors());
   app.use(express.json());

@@ -106,6 +106,18 @@ const envSchema = z.object({
   /** Quota sulle generazioni di riassunti AI (costo del modello). */
   RATE_LIMIT_AI_MAX: z.coerce.number().int().positive().default(20),
   RATE_LIMIT_AI_WINDOW_SECONDS: z.coerce.number().int().positive().default(300),
+
+  /**
+   * X2 — quanti proxy fidati stanno davanti all'app (`app.set('trust proxy', n)`).
+   * In locale è **1** (nginx del frontend); su una piattaforma cloud può essere
+   * **2** (l'edge della piattaforma più il proxy dell'app). Con il valore sbagliato
+   * `req.ip` non è l'IP del client e il rate limiting conta la chiave sbagliata —
+   * quindi va dichiarato, non indovinato. `false` = nessun proxy davanti.
+   */
+  TRUST_PROXY: z
+    .union([z.coerce.number().int().min(0).max(10), z.literal('false')])
+    .default(1)
+    .transform((value) => (value === 'false' ? false : value)),
 });
 
 export type Env = z.infer<typeof envSchema>;

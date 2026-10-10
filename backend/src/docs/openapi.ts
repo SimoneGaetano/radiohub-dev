@@ -389,6 +389,29 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/posts/stream': {
+      get: {
+        tags: ['Posts'],
+        operationId: 'streamPosts',
+        summary: 'Flusso SSE sui post nuovi (X5)',
+        description:
+          'Connessione persistente `text/event-stream`. All’apertura invia `retry: 10000` e un evento `ready`; ogni sincronizzazione che inserisce o aggiorna post pubblica poi un evento `posts` con `{ created, updated, at }`. Gli eventi passano da Redis pub/sub, quindi arrivano anche ai client collegati a un’altra istanza del backend. Un commento SSE (`: ping`) ogni 25 secondi tiene viva la connessione attraverso il proxy: senza, il `proxy_read_timeout` la chiuderebbe. L’header `X-Accel-Buffering: no` — insieme a `proxy_buffering off` in `frontend/nginx.conf` — evita che il proxy accumuli gli eventi in un buffer. Il browser si riconnette da solo, rispettando i 10 secondi annunciati.',
+        responses: {
+          '200': {
+            description:
+              'Flusso di eventi: `ready` all’apertura, `posts` a ogni sincronizzazione con novità, `: ping` come keep-alive',
+            content: {
+              'text/event-stream': {
+                schema: { type: 'string' },
+                example:
+                  'retry: 10000\n\nevent: ready\ndata: {"clients":1}\n\nevent: posts\ndata: {"created":2,"updated":0,"at":"2026-10-10T11:00:00.000Z"}\n\n: ping\n\n',
+              },
+            },
+          },
+          '429': { $ref: '#/components/responses/TooManyRequests' },
+        },
+      },
+    },
     '/api/posts/{id}/summary': {
       get: {
         tags: ['Summaries'],

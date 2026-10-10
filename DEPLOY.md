@@ -1,13 +1,15 @@
 # Deploy pubblico (X2)
 
-Questa guida porta RadioHub su un **URL pubblico**. La parte nel codice è fatta e
-provata in locale; **la parte manuale è tua**, perché creare l'account richiede la
-tua email (su qualche piattaforma serve anche una carta, pure per il piano free).
+Questa guida spiega **come RadioHub sta su un URL pubblico e come rifare il
+deploy**: <https://radiohub-frontend.onrender.com> (Render: frontend, backend,
+PostgreSQL, Redis). È scritta per essere seguita da zero, ma è anche il **resoconto
+di un deploy vero**: i cinque punti della sezione 4 non sono ipotesi, sono gli errori
+incontrati davvero e come si riconoscono dal log.
 
-> **Stato onesto**: finché non esiste un URL verificato, X2 non è svolto. Questa
-> guida esiste perché il resto non sia improvvisato: le due modifiche che servivano
-> davvero — proxy di nginx configurabile e `TRUST_PROXY` — sono già dentro e sono
-> state provate ricostruendo lo stack.
+> **Stato**: X2 è **svolto e verificato** — gli esiti delle chiamate sull'URL sono
+> nella sezione finale. Le due modifiche nel codice che servivano davvero — proxy di
+> nginx a *template* e `TRUST_PROXY` — sono dentro l'immagine, quindi locale e cloud
+> usano lo **stesso artefatto**: cambiano solo le variabili d'ambiente.
 
 ## Cosa serve
 
@@ -24,11 +26,11 @@ tua email (su qualche piattaforma serve anche una carta, pure per il piano free)
 | Railway / Fly.io | molto semplici | richiedono credito o carta anche per il piano free |
 | VPS (Hetzner, Oracle) | tutto in `docker compose`, identico alla locale | carta richiesta e TLS da gestire a mano |
 
-**Se il deploy è il 10/10 e la valutazione è entro il 9/11, il database free di
-Render basta.** Per un URL che duri di più: sostituisci il database con
-[Neon](https://neon.tech) e la cache con [Upstash](https://upstash.com) — free
-senza scadenza — e incolla le due stringhe di connessione in `DATABASE_URL` e
-`REDIS_URL`. **Non serve toccare il codice.**
+**Il deploy è del 10/10/2026 e il database free scade il 9/11/2026** (30 giorni):
+per una valutazione dentro quella finestra basta così. Per un URL che duri di più:
+sostituisci il database con [Neon](https://neon.tech) e la cache con
+[Upstash](https://upstash.com) — free senza scadenza — e incolla le due stringhe di
+connessione in `DATABASE_URL` e `REDIS_URL`. **Non serve toccare il codice.**
 
 ## I passi
 
@@ -57,8 +59,10 @@ senza scadenza — e incolla le due stringhe di connessione in `DATABASE_URL` e
 > repo, dove non c'è. Il percorso corretto è `frontend/Dockerfile` (relativo alla
 > radice), esattamente come il backend usa `backend/Dockerfile`.
 
-`render.yaml` non è stato provato contro Render (non ho un account): se un campo
-non piace alla piattaforma, la dashboard dice quale. Gli stessi passi a mano:
+`render.yaml` è stato usato nel deploy reale: la blueprint ha creato database, cache
+e backend, ma **non** il frontend (l'unica risorsa con un `fromService`). Se anche a
+te la blueprint lascia fuori una risorsa, creala a mano con questi passi — la
+dashboard dice comunque quale campo non le piace:
 
 1. **PostgreSQL** → *New* → *Postgres* → piano free, nome `radiohub-db`.
 2. **Redis** → *New* → *Key Value* → piano free, nome `radiohub-redis`.
@@ -93,6 +97,9 @@ non piace alla piattaforma, la dashboard dice quale. Gli stessi passi a mano:
 5. Attendi gli healthcheck: quando entrambi sono *Live*, apri l'URL del frontend.
 
 ### 3. Verifica sull'URL pubblico
+
+Cinque comandi, nessuna interpretazione: se rispondono, il deploy funziona. Gli
+esiti ottenuti su questo deploy sono nella sezione finale.
 
 ```bash
 BASE=https://radiohub-frontend.onrender.com   # il tuo URL
@@ -151,10 +158,11 @@ la pagina e verifica che il preferito ci sia ancora.
 
 ### 5. Dopo il deploy
 
-- Aggiorna il README con **l'URL** e con la **data di scadenza** del database free
-  (Render: 30 giorni), più il comando per rifare il deploy.
-- Il backend applica migrazioni e seed all'avvio e sincronizza il feed: il primo
-  deploy riempie il database da solo.
+- ✓ **README aggiornato** con l'URL e con la **scadenza** del database free
+  (9/11/2026, cioè 30 giorni dal deploy del 10/10/2026), più il riferimento a questa
+  guida per rifare il deploy.
+- ✓ **Il database si è riempito da solo**: il backend applica migrazioni e seed
+  all'avvio e sincronizza il feed (11 notizie al primo avvio).
 
 ## Cosa è stato verificato
 

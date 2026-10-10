@@ -28,20 +28,22 @@ Il dettaglio per singolo requisito, con il file e i test che lo coprono, sta in
 | **X6** | Rate limiting, helmet, CORS, refresh token | `[x]` | `backend/src/middleware/rateLimit.ts` (contatori Redis, 3 quote, `429` + header `RateLimit-*`), `POST /api/auth/refresh` e `/api/auth/logout` (`authService.ts`), rinnovo trasparente in `frontend/src/services/api.ts`; 13 test (`tests/rateLimit.test.ts`, `tests/refreshToken.test.ts`) |
 | **X3** | Ricerca in linguaggio naturale | `[x]` | `POST /api/radios/search` (`backend/src/services/naturalSearchService.ts` + `modelClient.ts`): modello con risposta JSON validata da Zod e fallback a regole deterministiche (paesi + catene di tag delle pill); quota dedicata `nl-search`; 19 test backend e 4 frontend; README § *Ricerca in linguaggio naturale (X3)* |
 | **X5** | Aggiornamento in tempo reale (SSE) | `[x]` | `GET /api/posts/stream` + bus su **Redis pub/sub** (`backend/src/realtime/postEvents.ts`), `location` dedicata con `proxy_buffering off` in `frontend/nginx.conf`, hook `usePostStream` agganciato a `NewsSection`; 3 test backend e 3 frontend; README § *Notizie in tempo reale (X5)* |
+| **X4** | Domande sulle notizie (RAG) con fonti | `[x]` | `POST /api/posts/ask` (`backend/src/services/newsRagService.ts`): retrieval **TF-IDF** deterministico + sintesi del modello con citazioni **filtrate** sulle fonti recuperate; pannello `NewsAskPanel.tsx`; 16 test backend e 4 frontend; README § *Domande sulle notizie (X4)* |
 
-**Perché questi cinque.** X1 perché la CI è la prova che i test passano su una
+**Perché questi sei.** X1 perché la CI è la prova che i test passano su una
 macchina diversa dalla mia, e non solo sulla mia; X7 perché rende l'app usabile
 da telefono come un'app vera — installazione, tema, condivisione — e tocca
 accessibilità e UX, non solo funzionalità; X6 perché è l'unico che cambia la
 **postura** dell'app, non le sue funzioni: quote per non farsi abusare e sessioni
 brevi ma rinnovabili, con il logout che finalmente ha un effetto sul server; X3
-perché è l'unico che cambia il **modo** di cercare: dalla parola esatta
-all'intenzione, con l'interpretazione sempre visibile e correggibile; X5 perché
-toglie il ritardo: le notizie arrivano quando il backend le trova, non al giro
-successivo.
+perché cambia il **modo** di cercare: dalla parola esatta all'intenzione; X5
+perché toglie il ritardo: le notizie arrivano quando il backend le trova; X4
+perché aggiunge il "chiedi invece di scorrere", con le fonti a garanzia.
 
-Gli altri bonus (X2 deploy, X4 RAG sulle notizie, X8 E2E) sono valutati in
-[`TASKS.md`](./TASKS.md), con il motivo della scelta.
+Restano X2 (deploy) e X8 (E2E), valutati in [`TASKS.md`](./TASKS.md) con il motivo
+della scelta: il primo dipende da un servizio esterno, il secondo è un test che
+può diventare instabile, e in un progetto con 159 test automatici verdi non
+aggiunge la garanzia che già non ci sia.
 
 ## Struttura
 
@@ -804,6 +806,60 @@ più fra le istanze — ma l'app continua, perché la lista si riallinea con il
 polling e il pubblicatore non lancia (una sincronizzazione riuscita non deve
 fallire per colpa dell'annuncio). E il flusso è "best effort": nessuna garanzia di
 consegna, nessuna coda per chi era disconnesso.
+
+## Domande sulle notizie (X4)
+
+`POST /api/posts/ask` risponde a una domanda in italiano sul corpus delle notizie
+e restituisce **le fonti**: i passaggi usati (`sources`) e gli `id` che il modello
+dichiara di aver citato (`citationIds`).
+
+```bash
+curl -X POST http://localhost:8080/api/posts/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"cosa è successo a Federico l’Olandese Volante?"}'
+```
+
+Risposta reale, con il modello configurato:
+
+```
+source=ai  provider=gemini  citazioni: b82702ed…, 09096058…
+
+"Federico Van Stegeren, noto come Federico l'Olandese Volante, è morto all'età di
+ 76 anni, causando un'ondata di cordoglio nel mondo della radiofonia italiana."
+
+[0.066] Federico l'Olandese Volante, il ricordo della radiofonia…         ← citata
+[0.062] Addio a Federico l'Olandese Volante, una vita dedicata alla radio ← citata
+[0.013] RTL 102.5 è la radio ufficiale del Milano Premier Padel P1 2026   ← contesto
+```
+
+**Retrieval lessicale, non vettoriale — e perché.** Il corpus sono poche decine di
+articoli: un indice con embedding su così pochi documenti non migliorerebbe i
+risultati e renderebbe il comportamento non deterministico e non verificabile. Il
+punteggio è **TF-IDF** (frequenza del termine nell'articolo, normalizzata sulla
+lunghezza, moltiplicata per quanto il termine è raro nel corpus), il titolo pesa
+doppio, e la citazione è la **frase** con più termini della domanda — non una
+finestra fissa di caratteri, che taglierebbe le frasi a metà. Con un corpus grande
+la struttura regge, ma il caricamento dei candidati dovrebbe passare a una query
+SQL: è fra i limiti noti.
+
+**Le citazioni non sono decorative.** Il modello riceve *solo* i passaggi
+recuperati, risponde in JSON e gli `id` che dichiara vengono **filtrati contro le
+fonti realmente recuperate**: un id inventato non entra nella risposta.
+Nell'esempio il terzo passaggio è rumore (score 0.013) e infatti **non** è citato:
+la differenza fra "recuperato" e "usato" resta visibile a chi legge.
+
+**Degradazione dichiarata**: senza modello — o se la risposta non è conforme allo
+schema — la rotta risponde comunque con i passaggi pertinenti, `source:
+"retrieval"` e il motivo in `fallbackReason`. Se nessun passaggio è pertinente
+(`no-match`) il modello non viene nemmeno chiamato: non c'è nulla su cui
+rispondere, e non si paga una chiamata per scoprirlo.
+
+- Difesa da prompt injection come in A3/X3: la domanda viaggia fra delimitatori e
+  i marcatori vengono rimossi dal testo prima della chiamata.
+- Quota dedicata `news-ask`, separata da `ai-summary` (riassunti) e `nl-search`
+  (ricerca naturale).
+- 16 test backend (retrieval puro su corpus fisso, orchestrazione con modello
+  iniettato, validazione della rotta) + 4 frontend sul pannello.
 
 ## Limiti noti
 

@@ -95,6 +95,18 @@ potrebbe chiedersene il motivo.
   gli eventi restano nel buffer del proxy e non arrivano mai. Non è una teoria:
   è stato verificato con `curl -N` attraverso nginx, con l'evento pubblicato a
   mano su Redis.
+- **Nel RAG il retrieval è lessicale, non vettoriale (X4).** Con poche decine di
+  articoli un indice con embedding non migliorerebbe i risultati e renderebbe il
+  comportamento non deterministico e non verificabile: TF-IDF è spiegabile,
+  offline e testabile su un corpus fisso. La stessa struttura regge su un corpus
+  grande, ma il caricamento dei candidati dovrebbe passare a SQL.
+- **Le citazioni sono validate, non raccolte.** Gli `id` che il modello dichiara
+  vengono filtrati sulle fonti **davvero recuperate**: un id inventato non entra
+  nella risposta. È la differenza fra "il modello ha citato qualcosa" e "il
+  modello ha citato qualcosa che gli abbiamo dato".
+- **Se non c'è nulla di pertinente, il modello non si chiama.** Una domanda senza
+  riscontri nel corpus produce `no-match` e **zero** chiamate: pagare un modello
+  per fargli dire che non lo sa, su un corpus che non lo contiene, è solo costo.
 
 ## 4. Verifica automatizzata
 
@@ -135,6 +147,9 @@ del codice:
 - **Notizie in tempo reale (bonus X5)**: chiusa — sezione *Notizie in tempo reale
   (X5)* nel README. Limiti dichiarati: il flusso (best effort) tace se Redis è
   giù e non c'è coda per chi era disconnesso.
+- **Domande sulle notizie (bonus X4)**: chiusa — sezione *Domande sulle notizie
+  (X4)* nel README. Limite dichiarato: il corpus viene caricato in memoria, con
+  un corpus grande servirebbe una ricerca in SQL al posto del caricamento.
 - **Provider IA reale**: integrato (Gemini/OpenAI) e selezionabile con
   `SUMMARY_PROVIDER`, ma il default resta il **mock** per far partire l'app
   anche senza chiavi API.

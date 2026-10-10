@@ -114,7 +114,9 @@ services:
     restart: unless-stopped
     environment:
       # X2 — il reverse proxy di nginx (template) punta qui: in locale è il nome
-      # del servizio, su un cloud è l'host interno del backend. Stesso file.
+      # del servizio, su un cloud può essere l'URL pubblico del backend (con
+      # `BACKEND_SCHEME=https` e `BACKEND_PORT=443`).
+      BACKEND_SCHEME: http
       BACKEND_HOST: backend
       BACKEND_PORT: "4000"
     ports:

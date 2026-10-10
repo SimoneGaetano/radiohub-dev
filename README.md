@@ -926,6 +926,15 @@ locale e quella cloud ora sono **lo stesso artefatto**:
   il valore sbagliato `req.ip` non è l'IP del client e il rate limiting conta la
   chiave sbagliata — un difetto che in locale non si vedrebbe mai.
 
+**Cosa ha insegnato il primo deploy vero.** Il frontend è partito con
+`[emerg] host not found in upstream "radiohub-backend"`: nginx non risolveva il
+nome **interno** del backend, perché la rete privata fra servizi non è disponibile
+su tutti i piani. La soluzione non è rinunciare al proxy — che tiene il browser su
+una sola origine — ma puntarlo all'**URL pubblico** del backend con
+`BACKEND_SCHEME=https` e `BACKEND_PORT=443`. È il motivo per cui anche lo *scheme*
+è una variabile: in locale resta `http://backend:4000`, senza cambiare l'immagine.
+Se invece la rete interna c'è, il proxy funziona come in locale.
+
 **Stato**: `[~]`. Il deploy in sé non è stato eseguito perché creare l'account
 richiede email e (su alcune piattaforme) carta. Un bonus X2 senza URL non è X2,
 quindi la riga resta parziale finché l'URL non esiste e non è verificato.

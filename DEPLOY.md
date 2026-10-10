@@ -109,14 +109,23 @@ la pagina e verifica che il preferito ci sia ancora.
 
 ### 4. Le cinque cose che rompono un deploy
 
+0. **Il frontend esce all'avvio con `[emerg] host not found in upstream
+   "radiohub-backend"`** → nginx non risolve il nome **interno** del backend: la
+   rete privata fra servizi non è disponibile per tutti i piani (e i nomi interni
+   possono differire da quelli attesi). Il frontend non deve passare per la rete
+   interna: usa l'**URL pubblico** del backend, che funziona sempre —
+   `BACKEND_SCHEME=https`, `BACKEND_HOST=<backend>.onrender.com` (senza `https://`),
+   `BACKEND_PORT=443`. È anche il motivo per cui lo *scheme* è configurabile: in
+   locale il proxy resta su `http://backend:4000`, senza cambiare l'immagine.
 1. **Il frontend risponde ma `/api/*` dà `502`** → `BACKEND_HOST`/`BACKEND_PORT`
-   sbagliati: il template di nginx punta a un host che non esiste. Copia l'host
-   **interno** dalla dashboard.
+   (o `BACKEND_SCHEME`) sbagliati: il template di nginx punta a un host che non
+   esiste o al protocollo sbagliato.
 2. **Il backend non parte, o riavvia in loop** → `DATABASE_URL`/`REDIS_URL`
    mancanti, o presi dalla stringa *esterna* invece che da quella *interna*.
 3. **Il rate limiting blocca tutti insieme** → `TRUST_PROXY` sbagliato: con l'edge
-   della piattaforma davanti servono **2** hop. Si vede dalle chiavi in Redis
-   (`ratelimit:api:*`): comparirebbe l'IP del proxy, uguale per tutti.
+   della piattaforma **e** nginx del frontend davanti al backend servono **2** hop.
+   Si vede dalle chiavi in Redis (`ratelimit:api:*`): comparirebbe l'IP del proxy,
+   uguale per tutti.
 4. **Il flusso SSE non arriva** → `proxy_buffering off` è già nel template; se hai
    cambiato tu il proxy, il punto è lì.
 5. **Errori CORS** → non dovrebbero esistere: il browser parla solo con il frontend

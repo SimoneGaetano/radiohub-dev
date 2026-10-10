@@ -78,6 +78,12 @@ services:
         value: radiohub-backend
       - key: BACKEND_PORT
         value: "4000"
+      # In locale (e sulla rete interna della piattaforma, quando c'è) il proxy è
+      # su http. Se la rete interna non risolve — `[emerg] host not found in
+      # upstream` all'avvio del frontend — si passa all'URL pubblico del backend:
+      # BACKEND_SCHEME=https, BACKEND_HOST=<backend>.onrender.com, BACKEND_PORT=443.
+      - key: BACKEND_SCHEME
+        value: http
 
   - type: keyvalue
     name: radiohub-redis

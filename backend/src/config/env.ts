@@ -39,6 +39,16 @@ const envSchema = z.object({
     .transform((value) => (value && value.length > 0 ? value : undefined)),
   RADIO_API_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
   RADIO_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(600),
+  /**
+   * Bonus "Info AI": TTL della cache della bio AI di una stazione. La bio è la
+   * stessa per tutti, quindi si salva in Redis e si riusa: evita di richiamare il
+   * modello a ogni apertura del pannello. Default 24 ore.
+   */
+  RADIO_INFO_CACHE_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(86400),
 
   // FM-World (B1): fonte primaria della ricerca radio.
   /**

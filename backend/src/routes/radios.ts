@@ -4,6 +4,11 @@ import { getStationsByIds, searchRadios } from '../services/radioService';
 import { UpstreamError, UpstreamTimeoutError } from '../services/radioSource';
 import { buildFallbackBio, createAiService } from '../services/aiService';
 import { interpretQuery } from '../services/naturalSearchService';
+import {
+  buildRadioBioKey,
+  readRadioBio,
+  writeRadioBio,
+} from '../services/radioBioCache';
 import { authenticateJWTOptional } from '../middleware/authenticateJWT';
 import { naturalSearchRateLimiter } from '../middleware/rateLimit';
 import { errorContext, logger } from '../utils/logger';
@@ -267,13 +272,25 @@ radiosRouter.post('/ai/radio-info', async (req, res) => {
   }
 
   const { radioId, radioName, country, tags } = parsed.data;
+  // La bio è la stessa per tutti: la si salva in Redis e la si riusa, così non
+  // si richiama il modello a ogni apertura del pannello (bonus "Info AI").
+  const cacheKey = buildRadioBioKey({ radioId, radioName, country, tags });
 
   try {
+    const cached = await readRadioBio(cacheKey);
+    if (cached) {
+      res.setHeader('X-Cache', 'HIT');
+      res.json({ data: { radioId, radioName, bio: cached } });
+      return;
+    }
+
     const bio =
       (await aiService.generateRadioInfo(radioId, radioName, {
         country,
         tags,
       })) ?? buildFallbackBio(radioName, country);
+    await writeRadioBio(cacheKey, bio);
+    res.setHeader('X-Cache', 'MISS');
     res.json({ data: { radioId, radioName, bio } });
   } catch (error) {
     logger.error('AI radio-info generation failed', errorContext(error));

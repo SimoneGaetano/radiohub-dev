@@ -44,6 +44,13 @@ const MAX_DOCUMENTS = 200;
 /** Il titolo conta doppio: è breve, specifico e quasi sempre pertinente. */
 const TITLE_TOKEN_REPEATS = 2;
 
+/**
+ * `externalId` della riga demo inserita dal seed (`prisma/seed.ts`). Non è una
+ * notizia reale: resta nella lista `GET /api/posts` (dichiarata come demo), ma
+ * **non** entra nel corpus delle risposte (X4), così non compare tra le fonti.
+ */
+const SEED_EXTERNAL_ID = 'seed-contenuto-demo';
+
 /** Una fonte: il passaggio che ha prodotto il match. */
 export interface RagSource {
   postId: string;
@@ -92,6 +99,8 @@ interface IndexedDocument extends RetrievableDocument {
  */
 async function loadDocuments(): Promise<RetrievableDocument[]> {
   const rows = await prisma.post.findMany({
+    // La riga demo del seed non è una notizia: la si esclude dalle fonti (X4).
+    where: { externalId: { not: SEED_EXTERNAL_ID } },
     orderBy: { publishedAt: 'desc' },
     take: MAX_DOCUMENTS,
     select: { id: true, title: true, content: true, publishedAt: true },

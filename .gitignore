@@ -33,6 +33,10 @@ frontend/tmp-*.mjs
 # Worktree di altri strumenti: copie di lavoro, mai parte del repository
 .kilo/
 
+# Note di studio personali: non fanno parte della consegna
+STUDIO-INTERVISTA.md
+studio/
+
 # Playwright (X8): report e tracce dei test end-to-end
 frontend/playwright-report/
 frontend/test-results/

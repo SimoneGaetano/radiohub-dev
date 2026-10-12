@@ -71,6 +71,7 @@ si interviene).
 ### Task interne ancora aperte (non richieste dalla traccia)
 
 - [x] **1.6** Rate limiting distribuito e gestione sessioni/token (X6: `middleware/rateLimit.ts` + refresh token su Redis)
+- [x] **2.7** ✕ di azzeramento uguale nei tre campi (ricerca radio, "Filtra per titolo", "Chiedi alle notizie"): "Filtra per titolo" ne aveva **due** (quella nativa di `type="search"` **più** un pulsante costruito a mano) e "Chiedi alle notizie" **nessuna** (era un `type="text"`). Ora tutti e tre usano la sola ✕ nativa del browser — nessun pulsante nostro — e `tests/NewsSection.test.tsx` la difende (campo `type="search"` + nessuna seconda ✕)
 - [ ] **2.5** Modulo stazioni radio (persistenza/CRUD)
 - [ ] **2.6** Miglioramenti UX sugli errori della fonte radio (`502`): mantenere la griglia già caricata, banner "Riprova", un retry su `429`/`503`, e **loggare il `502`** (oggi silenzioso nei log)
 

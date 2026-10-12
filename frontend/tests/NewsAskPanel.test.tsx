@@ -119,6 +119,16 @@ describe('NewsAskPanel (X4)', () => {
     expect(screen.getByRole('button', { name: 'Chiedi' })).toBeDisabled();
   });
 
+  it('usa un campo `type="search"`: la ✕ che lo azzera è quella del browser', () => {
+    renderApp(<NewsAskPanel />);
+
+    // Stesso campo della ricerca radio: la ✕ di azzeramento arriva dal browser.
+    expect(screen.getByLabelText('Domanda sulle notizie')).toHaveAttribute(
+      'type',
+      'search',
+    );
+  });
+
   it('mostra l’errore quando la richiesta fallisce', async () => {
     post.mockRejectedValue(new Error('rete giù'));
 

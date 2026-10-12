@@ -40,9 +40,12 @@ export function NewsAskPanel() {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-3 flex flex-wrap gap-2">
+        {/* La ✕ che azzera il campo è quella nativa di `type="search"`, la stessa
+            dei due campi di ricerca: non serve un pulsante nostro. */}
         <label className="min-w-0 flex-1">
           <span className="sr-only">Domanda sulle notizie</span>
           <input
+            type="search"
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             placeholder="es. cosa si dice del festival del rock?"

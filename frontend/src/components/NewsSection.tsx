@@ -7,7 +7,6 @@ import {
   Newspaper,
   Search,
   Sparkles,
-  X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
@@ -349,7 +348,10 @@ export function NewsSection() {
         </p>
       </div>
 
-      {/* F3 — filter by title; the server applies it after the typing pause. */}
+      {/* F3 — filter by title; the server applies it after the typing pause.
+          The ✕ that clears the field is the one the browser draws itself on
+          `type="search"` — the very same control as the station search: it is
+          not a button of ours, so an extra custom one here would show two. */}
       <label className="relative block">
         <span className="sr-only">Filtra le notizie per titolo</span>
         <Search
@@ -361,19 +363,8 @@ export function NewsSection() {
           value={titleInput}
           onChange={(event) => setTitleInput(event.target.value)}
           placeholder="Filtra per titolo…"
-          className="w-full rounded-lg border border-slate-800 bg-slate-900 py-2.5 pl-9 pr-10 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-accent-border"
+          className="w-full rounded-lg border border-slate-800 bg-slate-900 py-2.5 pl-9 pr-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-accent-border"
         />
-        {titleInput ? (
-          <button
-            type="button"
-            onClick={() => setTitleInput('')}
-            aria-label="Azzera il filtro"
-            title="Azzera il filtro"
-            className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
-        ) : null}
       </label>
 
       {/* X4 — domande sul corpus delle notizie, con le fonti usate. */}

@@ -239,7 +239,9 @@ vengono proxied dal dev-server Vite verso il backend su `http://localhost:4000`
   in `localStorage` e nello store Redux.
 - **Notizie (F3)** con griglia articoli, riassunti AI **chiusi di default**
   ("Riassumi con AI" → "Mostra/Nascondi riassunto"), **filtro per titolo** e
-  **caricamento incrementale** della lista. Il filtro è **server-side**
+  **caricamento incrementale** della lista. La ✕ che azzera il campo di filtro è
+  quella **nativa** del browser (`type="search"`), la stessa della ricerca radio:
+  non serve un pulsante in più dell'app. Il filtro è **server-side**
   (`GET /api/posts?title=…`, il parametro costruito in B2): cerca su tutta la
   tabella, non solo sugli articoli già scaricati. Le notizie si mostrano **6 alla
   volta** e lo scroll infinito (`IntersectionObserver`, più il pulsante "Mostra

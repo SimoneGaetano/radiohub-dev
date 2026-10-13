@@ -1,8 +1,7 @@
 # RadioHub — Task & Stato
 
-Questo file è il **tracker**: dice a che punto siamo in un minuto. Il dettaglio
-delle 57 task — diagnosi, misure, prima/dopo e i "perché" delle scelte — sta in
-[`TASKS-archive.md`](./TASKS-archive.md).
+Questo file è il **tracker**: dice a che punto siamo in un minuto. Contiene lo stato
+per requisito e, sotto, la **cronologia con una riga per task**.
 
 Legenda: `[x]` fatto · `[~]` parziale · `[ ]` da fare. Le sigle dei requisiti
 (`B` backend, `F` frontend, `A` integrazione AI, `D` DevOps, `X` bonus) sono
@@ -79,9 +78,6 @@ si interviene).
 
 ## 3. Cronologia — una riga per task
 
-Il dettaglio (diagnosi, misure, prima/dopo) sta in
-[`TASKS-archive.md`](./TASKS-archive.md).
-
 ### Milestone 1 — Setup & Infrastruttura
 
 - [x] **1.1** Bootstrap del progetto: monorepo, TypeScript strict, health-check, client Postgres/Redis
@@ -97,8 +93,8 @@ Il dettaglio (diagnosi, misure, prima/dopo) sta in
 - [x] **2.2** Proxy verso la fonte radio esterna, timeout 5 s → `502`/`504`
 - [x] **2.3** Layer di caching Redis con TTL e header `X-Cache`
 - [x] **2.4** Preferiti utente: localStorage immediato, sync col backend per chi è loggato
-- [ ] **2.5** Modulo stazioni radio (persistenza/CRUD)
-- [ ] **2.6** Miglioramenti UX sugli errori della fonte radio (`502`)
+
+*(**2.5** e **2.6** restano aperte: sono elencate sopra, in "Task interne ancora aperte".)*
 
 ### Milestone 3 — Notizie, Autenticazione JWT & AI Mock
 

@@ -1,9 +1,16 @@
-# Uso dell'IA (Cline) nello sviluppo di RadioHub
+# Uso dell'IA nello sviluppo di RadioHub
 
-Questo documento descrive come l'intelligenza artificiale — nello specifico
-**Cline**, l'agente CLI utilizzato durante lo sviluppo — ha contribuito alla
+Questo documento descrive come l'intelligenza artificiale ha contribuito alla
 realizzazione di RadioHub, quali decisioni sono state prese con il suo supporto
 e quali limiti restano.
+
+## 0. Strumenti usati
+
+- **Gemini** (fuori dall'ambiente di sviluppo): il **piano iniziale** — milestone e
+  lista delle task — impostato a partire dal PDF della traccia.
+- **Cline** (agente dentro VS Code): implementazione, modifiche e verifiche.
+
+Non sono stati usati altri assistenti.
 
 ## 1. Ruolo dell'agente
 
@@ -199,4 +206,5 @@ del codice:
 
 ---
 
-*Documento generato e mantenuto con il supporto di Cline.*
+*Documento generato e mantenuto con il supporto di Gemini (piano iniziale) e Cline
+(implementazione).*

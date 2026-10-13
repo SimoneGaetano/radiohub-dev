@@ -416,6 +416,9 @@ Quello che farei con più tempo, coerente con i limiti qui sopra:
 - **Più filtri in alto** (lingua, paese): riusa ricerca e catene di tag che ci sono già.
 - **Miglioramenti UX sugli errori della fonte radio (`502`)**: mantenere la griglia già
   caricata, un banner "Riprova" e **loggare** il `502` (oggi silenzioso nei log).
+- **Mobile più compatto**: sotto i 640 px la griglia mostra **una card per riga** e ogni
+  card ha **quattro icone**; una card più compatta a **due colonne**, con le azioni
+  secondarie spostate nel player, ridurrebbe molto lo scorrimento.
 - **Logout che annulla subito il gettone**: una lista dei gettoni revocati su Redis.
 - **Un "lucchetto" per il job delle notizie**: con più istanze il job partirebbe una volta
   per istanza.

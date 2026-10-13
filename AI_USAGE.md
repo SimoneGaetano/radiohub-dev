@@ -14,8 +14,10 @@ Non sono stati usati altri assistenti.
 
 ## 1. Ruolo dell'agente
 
-Cline ha operato come *pair programmer* eseguendo attività ripetitive e
-meccaniche che uno sviluppatore dedica buona parte del tempo:
+Cline ha operato come *pair programmer* con un ruolo **anche decisionale**: ha
+**proposto l'architettura e le scelte tecniche** (elencate al § 3), che ho poi
+**verificato** eseguendo test, build e prove dal vivo. Sul piano operativo ha svolto
+anche le attività ripetitive che uno sviluppatore dedica buona parte del tempo:
 
 | Area | Attività svolte dall'agente |
 | ---- | ---------------------------- |
@@ -40,11 +42,11 @@ eseguita prima di passare alla successiva.
 | **4 — Frontend** | React 19 + Vite 8 + Tailwind 4, Redux Toolkit, ricerca con debounce, player HLS, modale auth, sezione notizie |
 | **5 — Consegna** | Seed del database, stack Docker unico, test di integrazione, logging strutturato |
 
-## 3. Decisioni tecniche assistite dall'IA
+## 3. Decisioni tecniche proposte dall'IA, validate da me
 
-Le seguenti scelte sono nate dall'analisi fatta durante lo sviluppo e sono
-riportate qui perché **non sono ovvie** e perché chi rileggerà il codice
-potrebbe chiedersene il motivo.
+Le seguenti scelte sono **proposte dall'agente** durante lo sviluppo e **validate da
+me** con test e prove dal vivo. Sono riportate qui perché **non sono ovvie** e perché
+chi rileggerà il codice potrebbe chiedersene il motivo.
 
 - **Prisma 7 richiede un driver adapter.** Il motore Rust è stato rimosso: per
   PostgreSQL serve `@prisma/adapter-pg`. Senza di esso `new PrismaClient()` non

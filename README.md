@@ -235,6 +235,13 @@ Il provider si sceglie da `SUMMARY_PROVIDER`: `auto` (Gemini se c'è la chiave, 
 OpenAI, altrimenti **mock**) · `gemini`/`openai` (senza chiave degrada al mock con un
 warning) · `mock` (offline, per i test). L'app **parte e funziona anche senza chiave**.
 
+**Dove si mette la chiave.** Per lo stack **Docker** nella **`.env` nella root** del
+progetto (è il file che `docker-compose.yml` passa al container): `GEMINI_API_KEY=...`,
+poi `docker compose up -d backend` per ricreare il container con il nuovo valore. Per lo
+**sviluppo locale** (`npm run dev` dentro `backend/`) in **`backend/.env`**. Il file
+`.env.example` è solo un **modello**: non viene letto da nessuno, va **copiato** in `.env`.
+La chiave resta **solo nel backend**: il frontend non la vede mai.
+
 Difese (A3): testo racchiuso tra `<<<ARTICOLO>>>` e `<<<FINE_ARTICOLO>>>` **con i
 delimitatori rimossi dal contenuto** (prompt injection); articolo **troncato** a
 `SUMMARY_MAX_INPUT_CHARS` (6000) su un confine di parola; **timeout** 15 s; **un retry**

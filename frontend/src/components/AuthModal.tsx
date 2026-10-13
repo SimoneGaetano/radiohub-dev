@@ -40,11 +40,22 @@ export function AuthModal({ open, onClose }: Props) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const credentials = { email: email.trim(), password };
+
     if (mode === 'login') {
       void dispatch(login(credentials));
-    } else {
-      void dispatch(register(credentials));
+      return;
     }
+
+    // Registrazione **con accesso immediato**: l'endpoint di registrazione non
+    // emette un token (restituisce l'utente), quindi subito dopo si fa il login
+    // con le stesse credenziali. Se la registrazione fallisce, si mostra il suo
+    // errore e non si prova il login.
+    void (async () => {
+      const created = await dispatch(register(credentials));
+      if (register.fulfilled.match(created)) {
+        await dispatch(login(credentials));
+      }
+    })();
   };
 
   return (

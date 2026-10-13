@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   STATION,
   openApp,
-  registerThenLogin,
+  registerAndLogin,
   stubAudioTransport,
   stubCatalogue,
   uniqueEmail,
@@ -29,9 +29,10 @@ test.describe('cerca → ascolta → preferiti', () => {
     await stubAudioTransport(page);
     await openApp(page);
 
-    // 1. Account reale: registrazione + login (bcrypt, JWT, tabella User).
+    // 1. Account reale: la registrazione **apre subito la sessione**
+    //    (bcrypt, JWT, tabella User).
     const email = uniqueEmail();
-    await registerThenLogin(page, email);
+    await registerAndLogin(page, email);
 
     // 2. Ricerca: il testo digitato arriva al catalogo, dopo la pausa di digitazione.
     await page.getByLabel('Cerca una radio per nome').fill('jazz');

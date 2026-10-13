@@ -113,18 +113,18 @@ export async function openApp(page: Page): Promise<void> {
 }
 
 /**
- * Registra un account e apre la sessione.
+ * Registra un account ed **entra subito**.
  *
- * Due passaggi perché la registrazione **non** apre una sessione (l'API
- * restituisce l'utente, non un token): è il comportamento reale
- * dell'applicazione, e il test lo attraversa invece di aggirarlo.
+ * La registrazione non emette un token (l'API restituisce l'utente), quindi è il
+ * **frontend** che, dopo il `201`, fa il login con le stesse credenziali: la
+ * modale si chiude da sola e compare il menu dell'account. Il test attraversa
+ * questo percorso reale invece di aggirarlo.
  */
-export async function registerThenLogin(
+export async function registerAndLogin(
   page: Page,
   email: string,
 ): Promise<void> {
   const openAuth = page.getByRole('button', { name: 'Accedi / Registrati' });
-  const dialog = page.getByRole('dialog', { name: 'Autenticazione' });
 
   await openAuth.click();
   await page
@@ -140,19 +140,7 @@ export async function registerThenLogin(
   // segnalato il primo giro di test.
   await page.getByRole('button', { name: 'Registrati', exact: true }).click();
 
-  // Dopo la registrazione la modale può restare aperta: se si è chiusa, la
-  // riapro, perché il passo successivo è il login vero e proprio.
-  if (!(await dialog.isVisible())) {
-    await openAuth.click();
-  }
-
-  await page
-    .getByRole('button', { name: 'Hai già un account? Accedi', exact: true })
-    .click();
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Accedi', exact: true }).click();
-
+  // Accesso immediato: la modale si chiude e compare il menu dell'account.
   await expect(
     page.getByRole('button', { name: `Menu utente di ${email}` }),
   ).toBeVisible();
